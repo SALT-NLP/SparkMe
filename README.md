@@ -66,16 +66,26 @@ python src/main.py --user_id user001 --user_agent --max_turns 50
 python src/main.py --user_id user001 --voice_input --voice_output
 ```
 
-### Web Mode
+### Web Mode (with GCP)
 
-Run the Flask web server:
+Helpful commands for your GCP setup:
 
 ```bash
-python src/main_flask.py
+# Setup key for your project (setup FLASK_SCRET_KEY and OPENAI_API_KEY)
+gcloud services enable secretmanager.googleapis.com
+gcloud secrets create flask-secret-key --replication-policy="automatic"
+echo -n "YOUR_KEY" | gcloud secrets versions add flask-secret-key --data-file=-
+
+# Setup for your project
+gcloud projects describe <project name> --format='value(projectNumber)' # This to get project number
+gcloud projects add-iam-policy-binding <project name> \
+    --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
 ```
 
-Then open `http://localhost:5000` in your browser. The web interface provides:
+Then, you can checkout `scripts/web_interview` for deployment scripts!
 
+The web interface provides:
 - User authentication (register/login)
 - Session creation and management
 - Text and voice message support

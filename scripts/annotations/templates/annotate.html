@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annotate Session {{ session_key }} - Annotation Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            font-size: 20px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .navbar a:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: #333;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .item-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .item-header {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .item-topic {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .item-content {
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .item-content strong {
+            color: #555;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .item-content ul {
+            margin-left: 20px;
+            color: #666;
+        }
+
+        .rating-group {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .rating-group label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .rating-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .rating-buttons label {
+            flex: 0 0 auto;
+            margin: 0;
+            font-weight: normal;
+            padding: 8px 16px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .rating-buttons input[type="radio"] {
+            margin-right: 5px;
+            cursor: pointer;
+        }
+
+        .rating-buttons input[type="radio"]:checked + span,
+        .rating-buttons label:has(input[type="radio"]:checked) {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .rating-buttons label:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .dimension-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .dimension-section h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+
+        .rating-scale label {
+            display: block;
+            margin: 8px 0;
+            padding: 10px;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .rating-scale input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .rating-scale label:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .rating-scale input[type="radio"]:checked + .radio-text,
+        .rating-scale label:has(input[type="radio"]:checked) {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .submit-section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            position: sticky;
+            bottom: 20px;
+        }
+
+        .btn-submit {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .rubric-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .rubric-box h4 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+
+        .rubric-box ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>📝 Annotating: {{ session_key }}</h1>
+        <div>
+            <a href="{{ url_for('sessions_list') }}">← Back to Sessions</a>
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if is_self_annotation %}
+        <div class="alert alert-info">
+            ℹ️ <strong>Self-annotation mode:</strong> You are rating your own interview session (all tasks).
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            ℹ️ <strong>Cross-annotation mode:</strong> You are rating emergent insights only.
+        </div>
+        {% endif %}
+
+        <!-- Annotation Instructions -->
+        <div class="card" style="background: #fff3e0; border-left: 4px solid #ff9800;">
+            <h2 style="color: #e65100;">Annotation Instructions</h2>
+            <p style="margin-bottom: 15px;">You will complete {% if is_self_annotation %}three tasks{% else %}one task{% endif %} to evaluate this interview session:</p>
+
+            {% if 'subtopics' in tasks_to_show %}
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #e65100;">Task 1 - Overall Interview Content Quality:</strong>
+                <p style="margin: 5px 0 0 20px; color: #666;">Rate the overall quality of how the interview covered topics across three dimensions: Coverage, Depth, and Correctness of the interviewer's summaries.</p>
+            </div>
+            {% endif %}
+
+            {% if 'emergent' in tasks_to_show %}
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #e65100;">Task 2 - Emergent Insights:</strong>
+                <p style="margin: 5px 0 0 20px; color: #666;">Rate each emergent subtopic that appeared during the interview. These are unexpected directions or insights that emerged beyond the planned interview topics. Evaluate how relevant, novel, surprising, and valuable each emergent insight was.</p>
+            </div>
+            {% endif %}
+
+            {% if 'overall' in tasks_to_show %}
+            <div style="margin-bottom: 0;">
+                <strong style="color: #e65100;">Task 3 - Overall Interview Interaction Quality:</strong>
+                <p style="margin: 5px 0 0 20px; color: #666;">Rate your overall interaction quality with the interview across four dimensions: Clarity, Adaptiveness, Comfort & Fairness, and Overall Experience.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="{{ url_for('submit') }}">
+            <input type="hidden" name="session_key" value="{{ session_key }}">
+
+            <!-- Task 1: Overall Interview Content Quality (only if in tasks_to_show) -->
+            {% if 'subtopics' in tasks_to_show %}
+            <div class="card">
+                <h2>Task 1: Overall Interview Content Quality</h2>
+                <p style="color: #666; margin-bottom: 20px;">Review the topics discussed below, then rate the overall interview.</p>
+
+                <!-- Show subtopics list as read-only context -->
+                <div style="background: #f8f9fa; border-left: 4px solid #6c757d; padding: 20px; margin-bottom: 25px; border-radius: 4px;">
+                    <h4 style="color: #495057; margin-bottom: 15px;">Topics Discussed:</h4>
+                    {% if session_data.subtopics %}
+                    <div style="margin-left: 0;">
+                        {% for subtopic in session_data.subtopics %}
+                        <div style="margin-bottom: 20px; padding: 15px; background: white; border-radius: 4px; border: 1px solid #dee2e6;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 8px;">{{ subtopic.description }}</div>
+
+                            {% if subtopic.final_summary %}
+                            <div style="margin-top: 8px; padding: 10px; background: #e7f3ff; border-left: 3px solid #0066cc; border-radius: 3px;">
+                                <strong style="color: #0066cc; font-size: 13px;">Summary:</strong>
+                                <p style="margin: 5px 0 0 0; color: #333; font-size: 14px;">{{ subtopic.final_summary }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if subtopic.notes %}
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; color: #667eea; font-size: 13px; font-weight: 500;">View detailed notes ({{ subtopic.notes|length }} items)</summary>
+                                <ul style="margin: 10px 0 0 20px; color: #666; font-size: 13px;">
+                                    {% for note in subtopic.notes %}
+                                    <li style="margin-bottom: 5px;">{{ note }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </details>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p style="color: #666; font-style: italic;">No subtopic data available.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Session-level rating scales -->
+                {% for dimension in coverage_rubric %}
+                <div class="dimension-section">
+                    <h3>{{ dimension.title }}</h3>
+                    <p class="description">{{ dimension.description }}</p>
+
+                    <div class="rating-scale">
+                        {% for value, label in dimension.scale.items() %}
+                        {% set prev_key = 'coverage:session:' + dimension.title|lower|replace(' ', '_') %}
+                        {% set is_checked = (previous_annotations.get(prev_key, {}).get('rating', '') == value|string) %}
+                        <label>
+                            <input type="radio" name="task1_{{ dimension.title|lower }}" value="{{ value }}" {% if is_checked %}checked{% endif %} required>
+                            <span class="radio-text"><strong>{{ value }}</strong> - {{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Optional comments -->
+                <div style="margin-top: 25px; padding: 20px; background: #fff; border-radius: 6px;">
+                    <label style="display: block; font-weight: 600; color: #555; margin-bottom: 10px;">
+                        Additional Comments (optional):
+                    </label>
+                    {% set prev_comment = previous_annotations.get('coverage:session:comment', {}).get('comment', '') %}
+                    <textarea name="task1_comments" rows="4" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Any additional feedback about interview coverage...">{{ prev_comment }}</textarea>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Task 2: Emergent Items (only if in tasks_to_show) -->
+            {% if 'emergent' in tasks_to_show %}
+            <div class="card">
+                <h2>Task 2: Rate Emergent Insights</h2>
+                <p style="color: #666; margin-bottom: 20px;">{{ session_data.emergent_items|length }} emergent insights to rate</p>
+
+                <div class="rubric-box">
+                    <h4>Rating Guidelines (1-5 scale for each dimension):</h4>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #856404;">Topical Relevance:</strong>
+                        <p style="margin: 5px 0; font-size: 13px;">How much did this emergent subtopic add new dimensions within the planned topic being discussed?</p>
+                        <ul style="font-size: 12px; margin-left: 20px;">
+                            <li>1 - Irrelevant or distracting</li>
+                            <li>2 - Weakly relevant with limited connection</li>
+                            <li>3 - Somewhat relevant but not fully aligned</li>
+                            <li>4 - Mostly relevant and clearly connected</li>
+                            <li>5 - Highly relevant and directly aligned with the subtopic</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #856404;">Topic-Level Emergence:</strong>
+                        <p style="margin: 5px 0; font-size: 13px;">How much did this discussion reveal novel or unexpected perspectives within this topic area? Did it go beyond obvious aspects to uncover new angles?</p>
+                        <p style="margin: 8px 0; font-size: 12px; padding: 8px; background: #fff3cd; border-left: 3px solid #856404; color: #856404;">💡 <strong>Example:</strong> Rate high if you'd want to ask other interviewees about this emergent direction because it opens important discussions. Rate low if the discussion stayed within predictable boundaries of the topic.</p>
+                        <ul style="font-size: 12px; margin-left: 20px;">
+                            <li>1 - Adds nothing new beyond the subtopic; not emergent</li>
+                            <li>2 - Adds minor new connections but largely redundant</li>
+                            <li>3 - Moderately emergent with some novel insight</li>
+                            <li>4 - Clearly emergent and adds meaningful new perspectives</li>
+                            <li>5 - Highly emergent, introducing substantial novel directions</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #856404;">Surprise:</strong>
+                        <p style="margin: 5px 0; font-size: 13px;">How unexpected were the emergent ideas or answers relative to what had already been discussed?</p>
+                        <ul style="font-size: 12px; margin-left: 20px;">
+                            <li>1 - Entirely expected or routine</li>
+                            <li>2 - Slightly unexpected</li>
+                            <li>3 - Moderately unexpected</li>
+                            <li>4 - Highly unexpected</li>
+                            <li>5 - Strongly surprising while remaining relevant</li>
+                        </ul>
+                    </div>
+
+                    <div style="margin-bottom: 0;">
+                        <strong style="color: #856404;">Analytical Value:</strong>
+                        <p style="margin: 5px 0; font-size: 13px;">How much does this emergent insight contribute to understanding AI workforce issues across the industry? What's the overall utility for research?</p>
+                        <p style="margin: 8px 0; font-size: 12px; padding: 8px; background: #fff3cd; border-left: 3px solid #856404; color: #856404;">💡 <strong>Example:</strong> Rate high if this provides valuable insights for understanding AI use/impact across roles and industries. Rate low if it's interesting for this specific person but has limited broader analytical value.</p>
+                        <ul style="font-size: 12px; margin-left: 20px;">
+                            <li>1 - Distracting or uninformative</li>
+                            <li>2 - Adds little analytical insight</li>
+                            <li>3 - Some insight but limited evaluative usefulness</li>
+                            <li>4 - Adds meaningful analytical insight</li>
+                            <li>5 - Substantially deepens understanding or evaluative power</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {% if session_data.emergent_items %}
+                {% for item in session_data.emergent_items %}
+                <div class="item-card">
+                    <div class="item-topic"><strong>Topic:</strong> {{ item.topic }}</div>
+                    <div class="item-header">{{ item.id }}: {{ item.description }}</div>
+
+                    <div class="item-content">
+                        {% if item.notes %}
+                        <strong>Notes:</strong>
+                        <ul>
+                            {% for note in item.notes %}
+                            <li>{{ note }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+
+                        {% if item.final_summary %}
+                        <strong>Summary:</strong>
+                        <p>{{ item.final_summary }}</p>
+                        {% endif %}
+                    </div>
+
+                    {% for dimension in emergent_rubric %}
+                    <div class="rating-group">
+                        <label>{{ dimension.title }}: <span style="color: red;">*</span></label>
+                        <div class="rating-buttons">
+                            {% for i in range(1, 6) %}
+                            {% set prev_key = 'emergent:' + item.id + ':' + dimension.title|lower|replace(' ', '_')|replace('-', '_') %}
+                            {% set is_checked = (previous_annotations.get(prev_key, {}).get('rating', '') == i|string) %}
+                            <label>
+                                <input type="radio" name="task2_{{ item.id }}_{{ dimension.title|lower|replace(' ', '_')|replace('-', '_') }}" value="{{ i }}" {% if is_checked %}checked{% endif %} required>
+                                <span>{{ i }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+                {% else %}
+                <p style="color: #666; font-style: italic;">No emergent insights captured for this session.</p>
+                {% endif %}
+
+                <!-- Optional comments -->
+                <div style="margin-top: 25px; padding: 20px; background: #fff; border-radius: 6px;">
+                    <label style="display: block; font-weight: 600; color: #555; margin-bottom: 10px;">
+                        Additional Comments (optional):
+                    </label>
+                    {% set prev_comment = previous_annotations.get('emergent:session:comment', {}).get('comment', '') %}
+                    <textarea name="task2_comments" rows="4" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Any additional feedback about emergent insights...">{{ prev_comment }}</textarea>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Task 3: Overall Interaction Quality (only if in tasks_to_show) -->
+            {% if 'overall' in tasks_to_show %}
+            <div class="card">
+                <h2>Task 3: Overall Interview Interaction Quality</h2>
+                <p style="color: #666; margin-bottom: 20px;">Rate the overall quality of the interview interaction quality across 4 dimensions.</p>
+
+                {% for dimension in overall_rubric %}
+                <div class="dimension-section">
+                    <h3>{{ dimension.title }}</h3>
+                    <p class="description">{{ dimension.description }}</p>
+
+                    <div class="rating-scale">
+                        {% for value, label in dimension.scale.items() %}
+                        {% set prev_key = 'overall:session:' + dimension.title|lower|replace(' ', '_')|replace('&', 'and') %}
+                        {% set is_checked = (previous_annotations.get(prev_key, {}).get('rating', '') == value|string) %}
+                        <label>
+                            <input type="radio" name="overall_{{ dimension.title|lower|replace(' ', '_')|replace('&', 'and') }}" value="{{ value }}" {% if is_checked %}checked{% endif %} required>
+                            <span class="radio-text"><strong>{{ value }}</strong> - {{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Optional comments -->
+                <div style="margin-top: 25px; padding: 20px; background: #f8f9fa; border-radius: 6px;">
+                    <label style="display: block; font-weight: 600; color: #555; margin-bottom: 10px;">
+                        Additional Comments (optional):
+                    </label>
+                    {% set prev_comment = previous_annotations.get('overall:session:comment', {}).get('comment', '') %}
+                    <textarea name="task3_comments" rows="4" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 4px; font-family: inherit; resize: vertical;" placeholder="Any additional feedback about the interview experience...">{{ prev_comment }}</textarea>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Submit Section -->
+            <div class="submit-section">
+                <button type="submit" class="btn-submit">Submit All Ratings</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
