@@ -237,3 +237,18 @@ Evaluates interview quality on three dimensions (each scored 1-5):
 ### Coverage Calculation (`calculate_coverage.py`)
 
 Computes cumulative coverage metrics from evaluation results.
+
+## Citation
+
+If you found our work helpful, please cite our work using the following citation (will be updated soon)!
+
+```bibtex
+@article{anugraha2026sparkme,
+  title={SparkMe: Adaptive Semi-Structured Interviewing for Qualitative Insight Discovery},
+  author={Anugraha, David and Padmakumar, Vishakh and Yang, Diyi},
+  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  year={2026}
+}
+```
+
+If you have any questions, you can open a [GitHub Issue](https://github.com/SALT-NLP/SparkMe/issues) or contact [David Anugraha](david.anugraha@gmail.com)!
