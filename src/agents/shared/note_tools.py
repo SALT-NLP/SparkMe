@@ -22,7 +22,7 @@ from src.utils.logger.session_logger import SessionLogger
 
 """
 Shared tools for updating the session agenda:
-- Session scribe
+- Agenda manager
 - Session coordinator
 """
 

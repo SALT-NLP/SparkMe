@@ -13,7 +13,7 @@ Shared tools to access the memory bank by:
 - Interviewer
 - Report section writer
 - Session coordinator
-- Session scribe
+- Agenda manager
 """
 class RecallInput(BaseModel):
     reasoning: str = Field(

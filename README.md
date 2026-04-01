@@ -137,8 +137,8 @@ Each agent has a `prompts.py` file in `src/agents/` containing its prompt templa
 | File | Controls |
 |---|---|
 | `src/agents/interviewer/prompts.py` | Interviewer persona, interview flow instructions, STAR framework usage |
-| `src/agents/session_scribe/prompts.py` | Note-taking strategy, subtopic coverage evaluation, emergent insight detection |
-| `src/agents/strategic_planner/prompts.py` | Question prioritization, rollout strategies, utility function weights |
+| `src/agents/agenda_manager/prompts.py` | Note-taking strategy, subtopic coverage evaluation, emergent insight detection |
+| `src/agents/exploration_planner/prompts.py` | Question prioritization, rollout strategies, utility function weights |
 | `src/agents/user/prompts.py` | Simulated interviewee behavior (only relevant when using `--user_agent`) |
 
 ## Baselines
@@ -190,7 +190,7 @@ python baselines/mimitalk/mimitalk.py \
 
 **`baselines/storysage/`**
 
-A multi-agent system with multiple specialized components: an interviewer agent, a session scribe for note-taking, a strategic planner, a section writer, and a session coordinator. Uses vector databases (FAISS) for question banks and session memories, enabling semantic retrieval during interviews. The most architecturally complex baseline.
+A multi-agent system with multiple specialized components: an interviewer agent, a agenda manager for note-taking, a exploration planner, a section writer, and a session coordinator. Uses vector databases (FAISS) for question banks and session memories, enabling semantic retrieval during interviews. The most architecturally complex baseline.
 
 ```bash
 cd baselines/storysage

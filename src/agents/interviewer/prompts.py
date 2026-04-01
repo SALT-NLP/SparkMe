@@ -173,7 +173,7 @@ Here is the topics and subtopics that you can choose and ask during the intervie
 
 STRATEGIC_QUESTIONS = """
 <strategic_questions>
-The Strategic Planner has suggested the following questions to fill coverage gaps and explore emergent insights.
+The Exploration Planner has suggested the following questions to fill coverage gaps and explore emergent insights.
 
 {strategic_questions}
 

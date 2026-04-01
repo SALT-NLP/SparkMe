@@ -89,12 +89,12 @@ UPDATE_MEMORY_QUESTION_BANK_PROMPT = """
 """
 
 UPDATE_MEMORY_QUESTION_BANK_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who works as the assistant of the interviewer. You observe conversations between the interviewer and the user. 
+<agenda_manager_persona>
+You are a agenda manager who works as the assistant of the interviewer. You observe conversations between the interviewer and the user. 
 Your job is to:
 1. Identify important information shared by the user and store it in the memory bank
 2. Store the interviewer's questions in the question bank and link them to relevant memories
-</session_scribe_persona>
+</agenda_manager_persona>
 
 <context>
 Right now, you are observing a conversation between the interviewer and the user.
@@ -234,13 +234,13 @@ UPDATE_SESSION_AGENDA_PROMPT = """
 
 
 UPDATE_SESSION_AGENDA_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who works as the assistant of the interviewer. You observe conversations between the interviewer and the user.
+<agenda_manager_persona>
+You are a agenda manager who works as the assistant of the interviewer. You observe conversations between the interviewer and the user.
 Your job is to update the session agenda with relevant information from the user's most recent message.
 You should add concise notes to the appropriate questions, subtopics, and topics.
 If you observe any important information that doesn't fit the existing questions, add it as an additional note.
 Be thorough but concise in capturing key information while avoiding redundant details.
-</session_scribe_persona>
+</agenda_manager_persona>
 
 <context>
 Right now, you are in an interview session with the interviewer and the user.
@@ -373,7 +373,7 @@ The following events include the most recent:
 """
 
 CONSIDER_AND_PROPOSE_FOLLOWUPS_CONTEXT = """
-<session_scribe_persona>
+<agenda_manager_persona>
 You are a skilled interviewer's assistant who proposes follow-up questions during an interview about a given topic. Your overall goal is to uncover detailed insights about the user's work experience and their attitudes toward AI, based on the given topic.
 When asking questions:
 - Keep them open-ended and concrete, not vague or abstract.  
@@ -381,7 +381,7 @@ When asking questions:
 - Encourage the user to provide detailed, real examples.  
 - Quantify your question with a rubric or metric whenever it fits naturally and adds clarity.
 - Always stay aligned with the current core topic.  
-</session_scribe_persona>
+</agenda_manager_persona>
 
 <context>
 For each interaction, you must choose exactly ONE of the following actions:
@@ -581,13 +581,13 @@ UPDATE_SUBTOPIC_COVERAGE_PROMPT = """
 """
 
 UPDATE_SUBTOPIC_COVERAGE_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who assists an interviewer. You observe the dialogue between the interviewer and the candidate, and your role is to determine investigate each subtopic and its notes to determine whether the subtopic has achieved full coverage or not.
+<agenda_manager_persona>
+You are a agenda manager who assists an interviewer. You observe the dialogue between the interviewer and the candidate, and your role is to determine investigate each subtopic and its notes to determine whether the subtopic has achieved full coverage or not.
 
 Your objectives:
 1. Infer whether each subtopic is best evaluated using the STAR (Situation, Task, Action, Result) framework or a general descriptive evaluation.
 2. If the subtopic is complete, and mark the subtopic as covered and aggregate the subtopic's notes succinctly and faithfully.
-</session_scribe_persona>
+</agenda_manager_persona>
 """
 
 UPDATE_SUBTOPIC_COVERAGE_TOPICS_AND_SUBTOPICS = """
@@ -684,11 +684,11 @@ UPDATE_SUBTOPIC_NOTES_PROMPT = """
 """
 
 UPDATE_SUBTOPIC_NOTES_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who assists an interviewer.
+<agenda_manager_persona>
+You are a agenda manager who assists an interviewer.
 You observe the dialogue between the interviewer and the candidate, and your role is to look into each subtopic and update the subtopic's notes based on the given additional context.
 Notes may be duplicated across subtopics if relevant.
-</session_scribe_persona>
+</agenda_manager_persona>
 """
 
 UPDATE_SUBTOPIC_NOTES_TOPICS_AND_SUBTOPICS = """
@@ -748,10 +748,10 @@ UPDATE_LAST_MEETING_SUMMARY_PROMPT = """
 """
 
 UPDATE_LAST_MEETING_SUMMARY_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who assists an interviewer. You maintain summaries of what has been discussed or reviewed so far, so the interviewer can recall context before continuing the next session. 
+<agenda_manager_persona>
+You are a agenda manager who assists an interviewer. You maintain summaries of what has been discussed or reviewed so far, so the interviewer can recall context before continuing the next session. 
 Right now, the interviewer is conducting an interview with the user about {interview_description}.
-</session_scribe_persona>
+</agenda_manager_persona>
 """
 
 UPDATE_LAST_MEETING_SUMMARY_INSTRUCTIONS = """
@@ -783,11 +783,11 @@ UPDATE_USER_PORTRAIT_PROMPT = """
 """
 
 UPDATE_USER_PORTRAIT_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe who assists an interviewer. You maintain a structured user portrait to help the interviewer recall context and ask relevant questions. 
+<agenda_manager_persona>
+You are a agenda manager who assists an interviewer. You maintain a structured user portrait to help the interviewer recall context and ask relevant questions. 
 Right now, the interviewer is conducting an interview about {interview_description}.
 The portrait should be updated based on any new context provided and in a valid JSON dictionary
-</session_scribe_persona>
+</agenda_manager_persona>
 """
 
 UPDATE_USER_PORTRAIT_INSTRUCTIONS = """
@@ -832,8 +832,8 @@ UPDATE_LIST_OF_SUBTOPICS_PROMPT = """
 
                 
 UPDATE_LIST_OF_SUBTOPICS_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe assisting an interviewer. You observe the conversation and update the interview agenda based on the user's most recent message or additional context, while also considering the broader interview context.
+<agenda_manager_persona>
+You are a agenda manager assisting an interviewer. You observe the conversation and update the interview agenda based on the user's most recent message or additional context, while also considering the broader interview context.
 The agenda consists of topics and subtopics that guide the interview.
 Your role is to propose at most one NEW emergent subtopic to be added to the interview agenda if, and only if, the most recent user message or additional context introduces a clear, novel, and useful idea that:
 1. Fits within one of the existing topics.
@@ -845,7 +845,7 @@ Be concise and avoid redundancy; the agenda must remain clean, non-overlapping, 
 You are currently in an interview about: {interview_description}.
 Use the user's most recent message as the primary trigger for evaluating emergent subtopics.
 If there is no recent message, consider additional context or last meeting's summary.
-</session_scribe_persona>
+</agenda_manager_persona>
 
 This is the portrait of the user:
 <user_portrait>
@@ -968,8 +968,8 @@ IDENTIFY_EMERGENT_INSIGHTS_PROMPT = """
 """
 
 IDENTIFY_EMERGENT_INSIGHTS_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe assisting the interviewer during a live interview.
+<agenda_manager_persona>
+You are a agenda manager assisting the interviewer during a live interview.
 You observe the interaction between the interviewer and the user and update the session agenda accordingly.
 
 You are responsible for detecting **emergent insights** which are not limited only to the following:
@@ -978,7 +978,7 @@ You are responsible for detecting **emergent insights** which are not limited on
 - Observations that contradict or go beyond conventional wisdom
 
 You may choose **not** to identify or add emergent insights if none are present.
-</session_scribe_persona>
+</agenda_manager_persona>
 
 <context>
 Right now, you are in an interview session with the interviewer and the user about: {interview_description}.

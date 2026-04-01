@@ -5,8 +5,8 @@ import os
 
 
 from src.agents.base_agent import BaseAgent
-from src.agents.session_scribe.prompts import get_prompt
-from src.agents.session_scribe.tools import UpdateSessionNote, UpdateSubtopicNotes, UpdateSubtopicCoverage, FeedbackSubtopicCoverage, \
+from src.agents.agenda_manager.prompts import get_prompt
+from src.agents.agenda_manager.tools import UpdateSessionNote, UpdateSubtopicNotes, UpdateSubtopicCoverage, FeedbackSubtopicCoverage, \
     UpdateMemoryBankAndSession, AddHistoricalQuestion, IdentifyEmergentInsights
 from src.agents.shared.memory_tools import Recall
 from src.agents.shared.note_tools import AddInterviewQuestion
@@ -25,19 +25,19 @@ if TYPE_CHECKING:
 
 
 
-class SessionScribeConfig(TypedDict, total=False):
-    """Configuration for the SessionScribe agent."""
+class AgendaManagerConfig(TypedDict, total=False):
+    """Configuration for the AgendaManager agent."""
     user_id: str
 
 
-class SessionScribe(BaseAgent, Participant):
-    def __init__(self, config: SessionScribeConfig, interview_session: 'InterviewSession'):
+class AgendaManager(BaseAgent, Participant):
+    def __init__(self, config: AgendaManagerConfig, interview_session: 'InterviewSession'):
         BaseAgent.__init__(
-            self, name="SessionScribe",
+            self, name="AgendaManager",
             description="Agent that takes notes and manages the user's memory bank",
             config=config
         )
-        Participant.__init__(self, title="SessionScribe",
+        Participant.__init__(self, title="AgendaManager",
                              interview_session=interview_session)
         
         # Current unprocessed memories
@@ -92,7 +92,7 @@ class SessionScribe(BaseAgent, Participant):
                 historical_question_bank= \
                     self.interview_session.historical_question_bank,
                 proposed_question_bank=self.interview_session.proposed_question_bank,
-                proposer="SessionScribe",
+                proposer="AgendaManager",
                 llm_engine=self.engine
             ),
             "recall": Recall(
@@ -104,7 +104,7 @@ class SessionScribe(BaseAgent, Participant):
         '''Handle incoming messages'''
         SessionLogger.log_to_file(
             "execution_log",
-            f"[NOTIFY] Session scribe received message from {message.role}"
+            f"[NOTIFY] Agenda manager received message from {message.role}"
         )
 
         if message.role == "Interviewer":
@@ -139,13 +139,13 @@ class SessionScribe(BaseAgent, Participant):
 
             # Get user portrait and last meeting summary
             await asyncio.gather(
-                self.interview_session.session_scribe._update_user_portrait(
+                self.interview_session.agenda_manager._update_user_portrait(
                     additional_context=additional_context
                 ),
-                self.interview_session.session_scribe._update_last_meeting_summary(
+                self.interview_session.agenda_manager._update_last_meeting_summary(
                     additional_context=additional_context
                 ),
-                self.interview_session.session_scribe._update_subtopic_notes(
+                self.interview_session.agenda_manager._update_subtopic_notes(
                     additional_context=additional_context
                 )
             )
@@ -531,7 +531,7 @@ class SessionScribe(BaseAgent, Participant):
         self.handle_tool_calls(response)
 
     def _get_formatted_prompt(self, prompt_type: str, **kwargs) -> str:
-        '''Gets the formatted prompt for the SessionScribe agent.'''
+        '''Gets the formatted prompt for the AgendaManager agent.'''
         prompt = get_prompt(prompt_type)
         if prompt_type == "consider_and_propose_followups":
             # Get all message events
@@ -706,7 +706,7 @@ class SessionScribe(BaseAgent, Participant):
             })
 
     async def get_session_memories(self, clear_processed=False, wait_for_processing=True, include_processed=False) -> List[Memory]:
-        """Get memories added by session scribe during current session.
+        """Get memories added by agenda manager during current session.
         
         Args:
             clear_processed: 

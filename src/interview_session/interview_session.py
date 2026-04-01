@@ -12,8 +12,8 @@ from tiktoken import get_encoding
 from src.agents.base_agent import BaseAgent
 from src.interview_session.session_models import Message, MessageType, Participant
 from src.agents.interviewer.interviewer import Interviewer, InterviewerConfig, TTSConfig
-from src.agents.session_scribe.session_scribe import SessionScribe, SessionScribeConfig
-from src.agents.strategic_planner.strategic_planner import StrategicPlanner, StrategicPlannerConfig
+from src.agents.agenda_manager.agenda_manager import AgendaManager, AgendaManagerConfig
+from src.agents.exploration_planner.exploration_planner import ExplorationPlanner, ExplorationPlannerConfig
 from src.agents.user.user_agent import UserAgent
 from src.content.session_agenda.session_agenda import SessionAgenda
 from src.utils.data_process import save_feedback_to_csv
@@ -187,46 +187,46 @@ class InterviewSession:
             ),
             interview_session=self
         )
-        # SessionScribe config with optional dedicated model
-        scribe_config = SessionScribeConfig(user_id=self.user_id)
+        # AgendaManager config with optional dedicated model
+        scribe_config = AgendaManagerConfig(user_id=self.user_id)
 
         # Use dedicated scribe model if configured
-        scribe_model = os.getenv("SESSION_SCRIBE_MODEL_NAME")
+        scribe_model = os.getenv("AGENDA_MANAGER_MODEL_NAME")
         if scribe_model:
             scribe_config["model_name"] = scribe_model
             # Pass base_url if configured (for vLLM)
-            scribe_base_url = os.getenv("SESSION_SCRIBE_VLLM_BASE_URL")
+            scribe_base_url = os.getenv("AGENDA_MANAGER_VLLM_BASE_URL")
             if scribe_base_url:
                 scribe_config["base_url"] = scribe_base_url
 
-        self.session_scribe = SessionScribe(
+        self.agenda_manager = AgendaManager(
             config=scribe_config,
             interview_session=self
         )
         
-        # StrategicPlanner config
-        # TODO: Tune strategic planner parameters
-        planner_config = StrategicPlannerConfig(
+        # ExplorationPlanner config
+        # TODO: Tune exploration planner parameters
+        planner_config = ExplorationPlannerConfig(
                 user_id=self.user_id,
-                turn_trigger=int(os.getenv("STRATEGIC_PLANNER_TURN_TRIGGER", "3")),
-                num_rollouts=int(os.getenv("STRATEGIC_PLANNER_NUM_ROLLOUTS", "3")),
-                rollout_horizon=int(os.getenv("STRATEGIC_PLANNER_ROLLOUT_HORIZON", "3")),
-                max_strategic_questions=int(os.getenv("STRATEGIC_PLANNER_MAX_QUESTIONS", "5")),
-                alpha=float(os.getenv("STRATEGIC_PLANNER_ALPHA", "0.5")),  # Coverage weight
-                beta=float(os.getenv("STRATEGIC_PLANNER_BETA", "0.3")),   # Cost penalty
-                gamma=float(os.getenv("STRATEGIC_PLANNER_GAMMA", "0.2"))   # Emergence reward
+                turn_trigger=int(os.getenv("EXPLORATION_PLANNER_TURN_TRIGGER", "3")),
+                num_rollouts=int(os.getenv("EXPLORATION_PLANNER_NUM_ROLLOUTS", "3")),
+                rollout_horizon=int(os.getenv("EXPLORATION_PLANNER_ROLLOUT_HORIZON", "3")),
+                max_strategic_questions=int(os.getenv("EXPLORATION_PLANNER_MAX_QUESTIONS", "5")),
+                alpha=float(os.getenv("EXPLORATION_PLANNER_ALPHA", "0.5")),  # Coverage weight
+                beta=float(os.getenv("EXPLORATION_PLANNER_BETA", "0.3")),   # Cost penalty
+                gamma=float(os.getenv("EXPLORATION_PLANNER_GAMMA", "0.2"))   # Emergence reward
         )
         
         # Use dedicated planner model if configured
-        planner_model = os.getenv("STRATEGIC_PLANNER_MODEL_NAME")
+        planner_model = os.getenv("EXPLORATION_PLANNER_MODEL_NAME")
         if planner_model:
             planner_config["model_name"] = planner_model
             # Pass base_url if configured (for vLLM)
-            planner_base_url = os.getenv("STRATEGIC_PLANNER_VLLM_BASE_URL")
+            planner_base_url = os.getenv("EXPLORATION_PLANNER_VLLM_BASE_URL")
             if planner_base_url:
                 planner_config["base_url"] = planner_base_url
         
-        self.strategic_planner: StrategicPlanner = StrategicPlanner(
+        self.exploration_planner: ExplorationPlanner = ExplorationPlanner(
             config=planner_config,
             interview_session=self
         )
@@ -242,9 +242,9 @@ class InterviewSession:
         # Subscriptions of participants to each other
         self._subscriptions: Dict[str, List[Participant]] = {
             # Subscribers of Interviewer: Note-taker and User (in following code)
-            "Interviewer": [self.session_scribe],
-            # Subscribers of User: Interviewer, SessionScribe, and StrategicPlanner
-            "User": [self._interviewer, self.session_scribe, self.strategic_planner]
+            "Interviewer": [self.agenda_manager],
+            # Subscribers of User: Interviewer, AgendaManager, and ExplorationPlanner
+            "User": [self._interviewer, self.agenda_manager, self.exploration_planner]
         }
 
         # User participant for terminal interaction
@@ -406,7 +406,7 @@ class InterviewSession:
     async def run(self):
         """Run the interview session"""
         # Augment session agenda with existing profile if applicable
-        await self.session_scribe.augment_session_agenda(additional_context_path=self._initial_additional_context_path)
+        await self.agenda_manager.augment_session_agenda(additional_context_path=self._initial_additional_context_path)
 
         SessionLogger.log_to_file(
             "execution_log", f"[RUN] Starting interview session")
@@ -420,7 +420,7 @@ class InterviewSession:
 
             # Monitor the session for completion and timeout
             while self.session_in_progress or \
-                self.session_scribe.processing_in_progress:
+                self.agenda_manager.processing_in_progress:
                 await asyncio.sleep(0.1)
 
                 # Check for timeout
@@ -454,7 +454,7 @@ class InterviewSession:
                             "execution_log", 
                             (
                                 f"[REPORT] Trigger final report update. "
-                                f"Waiting for session scribe to finish processing..."
+                                f"Waiting for agenda manager to finish processing..."
                             )
                         )
                         await self.final_update_report_and_agenda(
@@ -500,7 +500,7 @@ class InterviewSession:
             include_processed: If True, returns all memories from the session
                               If False, returns only the unprocessed memories
         """
-        return await self.session_scribe.get_session_memories(
+        return await self.agenda_manager.get_session_memories(
             clear_processed=False, 
             wait_for_processing=True,
             include_processed=include_processed
@@ -515,7 +515,7 @@ class InterviewSession:
             return
             
         # Get current memory count without clearing or waiting
-        memories = await self.session_scribe \
+        memories = await self.agenda_manager \
             .get_session_memories(clear_processed=False,
                                    wait_for_processing=False)
         
@@ -533,9 +533,9 @@ class InterviewSession:
                 # Generate a summary of recent conversation
                 await self._update_conversation_summary()
                 
-                # Get memories and clear them from the session scribe
+                # Get memories and clear them from the agenda manager
                 memories_to_process = \
-                    await self.session_scribe.get_session_memories(
+                    await self.agenda_manager.get_session_memories(
                         clear_processed=True, wait_for_processing=False)
                 
                 # Measure the time auto-update would take
@@ -570,7 +570,7 @@ class InterviewSession:
         
         # Extract recent messages from chat history
         recent_messages: List[Message] = []
-        for msg in self.chat_history[-self.session_scribe._max_events_len:]:
+        for msg in self.chat_history[-self.agenda_manager._max_events_len:]:
             if msg.type == MessageType.CONVERSATION:
                 recent_messages.append(msg)
         

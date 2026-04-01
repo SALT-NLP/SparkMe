@@ -24,7 +24,7 @@ class SessionAgenda:
         self.interview_topic_manager: InterviewTopicManager = data.get("interview_topic_manager", InterviewTopicManager())
         self.current_snapshot: int = 0
 
-        # Strategic planning data (updated by StrategicPlanner)
+        # Strategic planning data (updated by ExplorationPlanner)
         self.strategic_priorities: Dict[str, dict] = data.get("strategic_priorities", {})
         self.emergent_insights: List[dict] = data.get("emergent_insights", [])
 
@@ -72,7 +72,7 @@ class SessionAgenda:
                                                                                      interview_evaluator=interview_evaluation)
             
             # TODO Refactor
-            if float(os.environ.get("STRATEGIC_PLANNER_GAMMA", 0.0)) > 0:
+            if float(os.environ.get("EXPLORATION_PLANNER_GAMMA", 0.0)) > 0:
                 interview_topic_manager.use_emergent_subtopics()
         
         data["interview_topic_manager"] = interview_topic_manager

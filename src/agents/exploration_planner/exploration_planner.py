@@ -1,5 +1,5 @@
 """
-Strategic Planner Agent for Long-Term Interview Planning
+Exploration Planner Agent for Long-Term Interview Planning
 
 This agent runs every X conversation turns to provide strategic guidance
 through rollout prediction, coverage analysis, and emergence detection.
@@ -16,22 +16,22 @@ from src.agents.base_agent import BaseAgent
 from src.interview_session.session_models import Message, Participant
 from src.utils.logger.session_logger import SessionLogger
 
-from src.agents.strategic_planner.strategic_state import StrategicState, ConversationRollout
-from src.agents.strategic_planner.tools import (
+from src.agents.exploration_planner.strategic_state import StrategicState, ConversationRollout
+from src.agents.exploration_planner.tools import (
     SuggestStrategicQuestions,
     AddEmergentSubtopic,
     IdentifyEmergentInsights
 )
 from src.content.session_agenda.topic_evaluator import get_registry
-from src.agents.strategic_planner.prompts import get_prompt
+from src.agents.exploration_planner.prompts import get_prompt
 from src.utils.llm.prompt_utils import format_prompt
 
 if TYPE_CHECKING:
     from src.interview_session.interview_session import InterviewSession
 
 
-class StrategicPlannerConfig(TypedDict, total=False):
-    """Configuration for Strategic Planner.
+class ExplorationPlannerConfig(TypedDict, total=False):
+    """Configuration for Exploration Planner.
 
     Most configuration comes from environment variables.
     Only required fields are included here.
@@ -39,9 +39,9 @@ class StrategicPlannerConfig(TypedDict, total=False):
     user_id: str
 
 
-class StrategicPlanner(BaseAgent, Participant):
+class ExplorationPlanner(BaseAgent, Participant):
     """
-    Long-term strategic planning agent that complements SessionScribe.
+    Long-term strategic planning agent that complements AgendaManager.
 
     Runs every 3-5 conversation turns to:
     - Analyze strategic coverage across all topics
@@ -49,17 +49,17 @@ class StrategicPlanner(BaseAgent, Participant):
     - Detect emergent insights (novel, counter-intuitive findings)
     - Generate strategic questions optimized for U = α·Coverage - β·Cost + γ·Emergence
 
-    This provides predictive, goal-oriented planning while SessionScribe
+    This provides predictive, goal-oriented planning while AgendaManager
     handles reactive, short-term planning.
     """
 
     def __init__(
         self,
-        config: StrategicPlannerConfig,
+        config: ExplorationPlannerConfig,
         interview_session: 'InterviewSession'
     ):
         """
-        Initialize Strategic Planner.
+        Initialize Exploration Planner.
 
         Args:
             config: Configuration dictionary
@@ -68,7 +68,7 @@ class StrategicPlanner(BaseAgent, Participant):
         # Initialize BaseAgent
         BaseAgent.__init__(
             self,
-            name="StrategicPlanner",
+            name="ExplorationPlanner",
             description="Long-term strategic planning agent for interview optimization",
             config=config
         )
@@ -76,7 +76,7 @@ class StrategicPlanner(BaseAgent, Participant):
         # Initialize Participant
         Participant.__init__(
             self,
-            title="StrategicPlanner",
+            title="ExplorationPlanner",
             interview_session=interview_session
         )
 
@@ -84,16 +84,16 @@ class StrategicPlanner(BaseAgent, Participant):
         self.user_id = config["user_id"]
 
         # Load config from environment variables with fallbacks
-        self.turn_trigger = int(os.getenv("STRATEGIC_PLANNER_TURN_TRIGGER", "3"))
-        self.num_rollouts = int(os.getenv("STRATEGIC_PLANNER_NUM_ROLLOUTS", "3"))
-        self.rollout_horizon = int(os.getenv("STRATEGIC_PLANNER_ROLLOUT_HORIZON", "3"))
-        self.max_strategic_questions = int(os.getenv("STRATEGIC_PLANNER_MAX_QUESTIONS", "5"))
+        self.turn_trigger = int(os.getenv("EXPLORATION_PLANNER_TURN_TRIGGER", "3"))
+        self.num_rollouts = int(os.getenv("EXPLORATION_PLANNER_NUM_ROLLOUTS", "3"))
+        self.rollout_horizon = int(os.getenv("EXPLORATION_PLANNER_ROLLOUT_HORIZON", "3"))
+        self.max_strategic_questions = int(os.getenv("EXPLORATION_PLANNER_MAX_QUESTIONS", "5"))
 
         # Utility function weights
-        self.alpha = float(os.getenv("STRATEGIC_PLANNER_ALPHA", "0.5"))  # Coverage weight
-        self.beta = float(os.getenv("STRATEGIC_PLANNER_BETA", "0.3"))  # Cost penalty
-        self.gamma = float(os.getenv("STRATEGIC_PLANNER_GAMMA", "0.2"))  # Emergence reward
-        self.min_novelty_score = int(os.getenv("STRATEGIC_PLANNER_MIN_NOVELTY", "3"))
+        self.alpha = float(os.getenv("EXPLORATION_PLANNER_ALPHA", "0.5"))  # Coverage weight
+        self.beta = float(os.getenv("EXPLORATION_PLANNER_BETA", "0.3"))  # Cost penalty
+        self.gamma = float(os.getenv("EXPLORATION_PLANNER_GAMMA", "0.2"))  # Emergence reward
+        self.min_novelty_score = int(os.getenv("EXPLORATION_PLANNER_MIN_NOVELTY", "3"))
 
         # Strategic state (NOT loaded from file, starts fresh each session)
         session_id = interview_session.session_id
@@ -307,7 +307,7 @@ class StrategicPlanner(BaseAgent, Participant):
         """
         Judge predicted coverage impact for a rollout using LLM evaluation.
 
-        Uses SessionScribe's STAR framework to validate which subtopics would
+        Uses AgendaManager's STAR framework to validate which subtopics would
         actually be covered by the predicted Q&A exchanges.
 
         Args:

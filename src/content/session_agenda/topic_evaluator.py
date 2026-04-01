@@ -82,7 +82,7 @@ class EvaluatorFactoryRegistry:
 _global_registry = EvaluatorFactoryRegistry()
 
 # Register built-ins
-_global_registry.register("minimum_threshold", lambda minimum_threshold=0.9: MinimumThresholdSubtopicsEvaluator(minimum_threshold, gamma=float(os.getenv("STRATEGIC_PLANNER_GAMMA", 0.0))))
+_global_registry.register("minimum_threshold", lambda minimum_threshold=0.9: MinimumThresholdSubtopicsEvaluator(minimum_threshold, gamma=float(os.getenv("EXPLORATION_PLANNER_GAMMA", 0.0))))
 
 def get_registry() -> EvaluatorFactoryRegistry:
     return _global_registry

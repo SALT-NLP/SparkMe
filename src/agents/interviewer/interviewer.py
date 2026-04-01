@@ -237,7 +237,7 @@ class Interviewer(BaseAgent, Participant):
                 )
             format_params["questions_and_notes"] = questions_and_notes_str
 
-            # Get strategic question suggestions from StrategicPlanner (only if not stale)
+            # Get strategic question suggestions from ExplorationPlanner (only if not stale)
             # Staleness is checked before formatting to avoid unnecessary work
             if self._should_include_strategic_questions():
                 strategic_questions_str = self._format_strategic_questions()
@@ -263,13 +263,13 @@ class Interviewer(BaseAgent, Participant):
 
     def _format_strategic_questions(self) -> str:
         """
-        Format strategic question suggestions from StrategicPlanner.
+        Format strategic question suggestions from ExplorationPlanner.
 
         Returns formatted string with strategic questions or empty state message.
         Handles case where suggestions may be stale (from 3-5 turns ago).
         """
-        # Access strategic state from StrategicPlanner
-        strategic_state = self.interview_session.strategic_planner.strategic_state
+        # Access strategic state from ExplorationPlanner
+        strategic_state = self.interview_session.exploration_planner.strategic_state
         suggestions = strategic_state.strategic_question_suggestions
 
         if not suggestions:
@@ -318,7 +318,7 @@ class Interviewer(BaseAgent, Participant):
         Returns:
             bool: True if strategic questions should be included, False if stale
         """
-        strategic_state = self.interview_session.strategic_planner.strategic_state
+        strategic_state = self.interview_session.exploration_planner.strategic_state
 
         # If no suggestions exist, don't include
         if not strategic_state.strategic_question_suggestions:
@@ -337,8 +337,8 @@ class Interviewer(BaseAgent, Participant):
         if last_planning_turn == 0:
             return False
 
-        # Get rollout horizon from strategic planner
-        rollout_horizon = self.interview_session.strategic_planner.rollout_horizon
+        # Get rollout horizon from exploration planner
+        rollout_horizon = self.interview_session.exploration_planner.rollout_horizon
 
         # Calculate staleness: questions are stale if we're beyond horizon + buffer
         # Buffer of 2 turns accounts for: 1) planning completes after trigger, 2) grace period
