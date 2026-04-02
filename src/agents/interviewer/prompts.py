@@ -39,11 +39,6 @@ def get_prompt(prompt_type: str = "normal"):
             "INSTRUCTIONS": BASELINE_INSTRUCTIONS,
             "OUTPUT_FORMAT": BASELINE_OUTPUT_FORMAT
         })
-    elif prompt_type == "quantify_question":
-        return format_prompt(GENERATE_RUBRIC_PROMPT, {
-            "INSTRUCTIONS": GENERATE_RUBRIC_INSTRUCTIONS,
-            "OUTPUT_FORMAT": GENERATE_RUBRIC_OUTPUT_FORMAT
-        })
 
 BASELINE_INTERVIEW_PROMPT = """
 {CONTEXT}
@@ -173,7 +168,7 @@ Here is the topics and subtopics that you can choose and ask during the intervie
 
 STRATEGIC_QUESTIONS = """
 <strategic_questions>
-The Strategic Planner has suggested the following questions to fill coverage gaps and explore emergent insights.
+The Exploration Planner has suggested the following questions to fill coverage gaps and explore emergent insights.
 
 {strategic_questions}
 
@@ -406,74 +401,6 @@ Step-by-step reasoning:
   </recall>
 </tool_calls>
 
-</output_format>
-"""
-
-GENERATE_RUBRIC_PROMPT = """
-You are an expert in creating clear, objective evaluation rubrics for interview questions.
-Your task is to evaluate the given question and decide if a rubric can be meaningfully applied.
-
-<question_to_evaluate>
-{question_text}
-</question_to_evaluate>
-
-{INSTRUCTIONS}
-
-{OUTPUT_FORMAT}
-"""
-
-GENERATE_RUBRIC_INSTRUCTIONS = """
-<instructions>
-1. **Determine Subjectivity and Quantifiability**:
-   - If the question involves a topic that can be meaningfully rated (e.g., skill, frequency, confidence, agreement), mark it as quantifiable.
-   - If the question concerns inherently numeric or factual information (e.g., age, years of experience, number of projects), mark it as not quantifiable (numeric) — these should be collected directly as raw numbers, not through a rubric.
-   - If the question is open-ended or conversational (e.g., small talk, storytelling, or narrative prompts), mark it as not quantifiable.
-
-2. a. **If Quantifiable (non-numeric)**:
-   - For subjective or behavioral topics that can be expressed in levels (e.g., frequency, confidence, proficiency), create a 5-point descriptive categorical scale.
-   - Provide clear labels and concise descriptions for each level, focusing on observable behaviors or examples.
-   - When paraphrasing the question:
-       * Keep it **friendly and conversational**, as if continuing a natural dialogue.
-       * Reference previously discussed examples when relevant (e.g., “Earlier you mentioned preparing samples — how do you decide which ones to run first?”).
-       * Explicitly **reference the rubric anchors** so the user knows what range is being considered. Examples:
-         - “On a scale from 1 to 5, where 1 means rarely and 5 means always…”
-         - “Would you say your approach is closer to low, occasional, moderate, strong, or very strong prioritization?”
-         - “Thinking in terms of levels — from low to exceptional — how would you describe your consistency?”
-       * You can phrase the rubric mention naturally, but **the scale must be concretely described**, not implied.
-       * Avoid sounding like a test; keep the tone exploratory and empathetic.
-
-2. b. **If Not Quantifiable**:
-   - Set <quantifiable>false</quantifiable>.
-   - Fill in <question></question> with the **EXACT COPY** of the original question.
-   - Leave <rubric></rubric> empty.
-   
-Use `enrich_question` for the tool call.
-</instructions>
-"""
-
-GENERATE_RUBRIC_OUTPUT_FORMAT = """
-Follow the output format below to return your response:
-
-<output_format>
-   <!-- IMPORTANT: If the current question is not quantifiable, set quantifiable field to be false and leave rubric empty. -->
-   <tool_calls>
-      <enrich_question>
-      <question>Paraphrased question if quantifiable, otherwise the EXACT ORIGINAL question. This should only contain ONE question.</question>
-      <quantifiable>true/false</quantifiable>
-      <rubric>
-         {{
-            "labels": ["label 1", "label 2", "label 3", "label 4", "label 5"],
-            "descriptions": [
-               "Description of label 1",
-               "Description of label 2",
-               "Description of label 3",
-               "Description of label 4",
-               "Description of label 5"
-            ]
-         }}
-      </rubric>
-      </enrich_question>
-   </tool_calls>
 </output_format>
 """
 

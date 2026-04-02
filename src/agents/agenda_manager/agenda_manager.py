@@ -5,18 +5,13 @@ import os
 
 
 from src.agents.base_agent import BaseAgent
-from src.agents.session_scribe.prompts import get_prompt
-from src.agents.session_scribe.tools import UpdateSessionNote, UpdateSubtopicNotes, UpdateSubtopicCoverage, FeedbackSubtopicCoverage, \
-    UpdateMemoryBankAndSession, AddHistoricalQuestion, IdentifyEmergentInsights
+from src.agents.agenda_manager.prompts import get_prompt
+from src.agents.agenda_manager.tools import UpdateSessionNote, UpdateSubtopicNotes, UpdateSubtopicCoverage, FeedbackSubtopicCoverage, \
+    UpdateMemoryBankAndSession
 from src.agents.shared.memory_tools import Recall
-from src.agents.shared.note_tools import AddInterviewQuestion
-from src.agents.shared.feedback_prompts import SIMILAR_QUESTIONS_WARNING, QUESTION_WARNING_OUTPUT_FORMAT
-from src.content.question_bank.question import QuestionSearchResult, SimilarQuestionsGroup
 from src.utils.data_process import read_from_pdf
 from src.utils.llm.prompt_utils import format_prompt
-from src.utils.llm.xml_formatter import extract_tool_arguments, extract_tool_calls_xml
 from src.utils.logger.session_logger import SessionLogger
-from src.utils.text_formatter import format_similar_questions
 from src.interview_session.session_models import Participant, Message
 from src.content.memory_bank.memory import Memory
 
@@ -25,19 +20,19 @@ if TYPE_CHECKING:
 
 
 
-class SessionScribeConfig(TypedDict, total=False):
-    """Configuration for the SessionScribe agent."""
+class AgendaManagerConfig(TypedDict, total=False):
+    """Configuration for the AgendaManager agent."""
     user_id: str
 
 
-class SessionScribe(BaseAgent, Participant):
-    def __init__(self, config: SessionScribeConfig, interview_session: 'InterviewSession'):
+class AgendaManager(BaseAgent, Participant):
+    def __init__(self, config: AgendaManagerConfig, interview_session: 'InterviewSession'):
         BaseAgent.__init__(
-            self, name="SessionScribe",
+            self, name="AgendaManager",
             description="Agent that takes notes and manages the user's memory bank",
             config=config
         )
-        Participant.__init__(self, title="SessionScribe",
+        Participant.__init__(self, title="AgendaManager",
                              interview_session=interview_session)
         
         # Current unprocessed memories
@@ -53,7 +48,7 @@ class SessionScribe(BaseAgent, Participant):
         # Locks and processing flags
         self.processing_in_progress = False # If processing is in progress
         self._pending_tasks = 0             # Track number of pending tasks
-        self._notes_lock = asyncio.Lock()   # Lock for _write_notes_and_questions
+        self._notes_lock = asyncio.Lock()   # Lock for memory writes
         self._session_agenda_lock = asyncio.Lock()  # Lock for session agenda
         self._tasks_lock = asyncio.Lock()   # Lock for updating task counter
 
@@ -66,11 +61,6 @@ class SessionScribe(BaseAgent, Participant):
                 get_current_qa=self._get_recent_qa,
                 session_agenda=self.interview_session.session_agenda
             ),
-            # "add_historical_question": AddHistoricalQuestion(
-            #     question_bank=self.interview_session.historical_question_bank,
-            #     memory_bank=self.interview_session.memory_bank,
-            #     get_real_memory_ids=self._get_real_memory_ids
-            # ),
             "update_session_agenda": UpdateSessionNote(
                 session_agenda=self.interview_session.session_agenda
             ),
@@ -83,18 +73,6 @@ class SessionScribe(BaseAgent, Participant):
             "update_subtopic_notes": UpdateSubtopicNotes(
                 session_agenda=self.interview_session.session_agenda
             ),
-            "identify_emergent_insights": IdentifyEmergentInsights(
-                session_agenda=self.interview_session.session_agenda,
-                min_novelty_score=3
-            ),
-            "add_interview_question": AddInterviewQuestion(
-                session_agenda=self.interview_session.session_agenda,
-                historical_question_bank= \
-                    self.interview_session.historical_question_bank,
-                proposed_question_bank=self.interview_session.proposed_question_bank,
-                proposer="SessionScribe",
-                llm_engine=self.engine
-            ),
             "recall": Recall(
                 memory_bank=self.interview_session.memory_bank
             ),
@@ -104,7 +82,7 @@ class SessionScribe(BaseAgent, Participant):
         '''Handle incoming messages'''
         SessionLogger.log_to_file(
             "execution_log",
-            f"[NOTIFY] Session scribe received message from {message.role}"
+            f"[NOTIFY] Agenda manager received message from {message.role}"
         )
 
         if message.role == "Interviewer":
@@ -139,13 +117,13 @@ class SessionScribe(BaseAgent, Participant):
 
             # Get user portrait and last meeting summary
             await asyncio.gather(
-                self.interview_session.session_scribe._update_user_portrait(
+                self.interview_session.agenda_manager._update_user_portrait(
                     additional_context=additional_context
                 ),
-                self.interview_session.session_scribe._update_last_meeting_summary(
+                self.interview_session.agenda_manager._update_last_meeting_summary(
                     additional_context=additional_context
                 ),
-                self.interview_session.session_scribe._update_subtopic_notes(
+                self.interview_session.agenda_manager._update_subtopic_notes(
                     additional_context=additional_context
                 )
             )
@@ -188,17 +166,7 @@ class SessionScribe(BaseAgent, Participant):
         """Process a Q&A pair with task tracking"""
         await self._increment_pending_tasks()
         try:
-            # 1. Update notes and questions given the repsonse to ALL Subtopic
-            # 2. Update to memory bank as well, but this has already been done since it's only tied to question id
-            # 3. Update session agenda
-            # 4.  a. See if current subtopic is well done or not (LLM-as-a-judge); if it does, mark as covered and update the summary of the subtopic (TODO)
-            #     b. Brainstorm possible emergent insights from the recent response.
-            # await asyncio.gather(
-            #     self._locked_write_memory_notes_and_question_bank(
-            #         interviewer_message, user_message), # Technically this should have lock for session agenda but ... we'll see
-            #     # self._locked_identify_emergent_insights(interviewer_message, user_message) # Quick analysis for emergent insights
-            # )
-            await self._locked_write_memory_notes_and_question_bank( interviewer_message, user_message),
+            await self._locked_write_memory_notes_and_question_bank(interviewer_message, user_message)
             await self._locked_update_subtopic_coverage(interviewer_message, user_message)
         finally:
             await self._decrement_pending_tasks()
@@ -224,66 +192,7 @@ class SessionScribe(BaseAgent, Participant):
                         tag="agenda_lock_message", 
                         content=user_message.content)
             await self._update_subtopic_coverage()
-            
-    async def _locked_update_list_of_subtopics(self, interviewer_message: Message, user_message: Message) -> None:
-        """Wrapper to handle update_subtopic_coverage with lock"""
-        async with self._session_agenda_lock:
-            self.add_event(sender=interviewer_message.role,
-                        tag="agenda_lock_message", 
-                        content=interviewer_message.content)
-            self.add_event(sender=user_message.role,
-                        tag="agenda_lock_message", 
-                        content=user_message.content)
-            await self._update_list_of_subtopics()
 
-    async def _locked_identify_emergent_insights(self, interviewer_message: Message, user_message: Message) -> None:
-        """Wrapper to handle emergent insight identification with lock"""
-        async with self._session_agenda_lock:
-            self.add_event(sender=interviewer_message.role,
-                        tag="agenda_lock_message",
-                        content=interviewer_message.content)
-            self.add_event(sender=user_message.role,
-                        tag="agenda_lock_message",
-                        content=user_message.content)
-            await self._identify_emergent_insights()
-
-    async def _identify_emergent_insights(self) -> None:
-        """
-        Identify emergent insights from the recent Q&A pair.
-
-        Quick analysis to detect counter-intuitive findings that contradict
-        conventional wisdom or reveal unexpected patterns.
-        """
-        prompt = self._get_formatted_prompt("identify_emergent_insights")
-        self.add_event(
-            sender=self.name,
-            tag="identify_emergent_insights_prompt",
-            content=prompt
-        )
-        response = await self.call_engine_async(prompt)
-        self.add_event(
-            sender=self.name,
-            tag="identify_emergent_insights_response",
-            content=response
-        )
-
-        # Handle tool calls (LLM decides whether to call tool or not)
-        self.handle_tool_calls(response)
-
-    async def _write_notes_and_questions(self) -> None:
-        """
-        Process user's response by updating session agenda 
-        and considering follow-up questions.
-        """
-        if self.use_baseline:
-            return
-        
-        # First update the direct response in session agenda
-        await self._update_session_agenda()
-
-        # Then consider and propose follow-up questions if appropriate
-        # await self._propose_followups()
-        
     async def _update_last_meeting_summary(self, additional_context: str):
         prompt = self._get_formatted_prompt("update_last_meeting_summary",
                                             additional_context=additional_context)
@@ -337,130 +246,6 @@ class SessionScribe(BaseAgent, Participant):
         
         async with self._session_agenda_lock:
             self.handle_tool_calls(response)
-
-    async def _propose_followups(self) -> None:
-        """
-        Determine if follow-up questions should be proposed 
-        and propose them if appropriate.
-        """
-        iterations = 0
-        previous_tool_call = None
-        similar_questions: List[SimilarQuestionsGroup] = []
-        
-        while iterations < self._max_consideration_iterations:
-            prompt = self._get_formatted_prompt(
-                "consider_and_propose_followups",
-                previous_tool_call=previous_tool_call,
-                similar_questions=similar_questions
-            )
-            
-            self.add_event(
-                sender=self.name,
-                tag=f"consider_and_propose_followups_prompt_{iterations}",
-                content=prompt
-            )
-
-            response = await self.call_engine_async(prompt)
-            self.add_event(
-                sender=self.name,
-                tag=f"consider_and_propose_followups_response_{iterations}",
-                content=response
-            )
-
-            # Check if agent wants to proceed with similar questions
-            if "<proceed>true</proceed>" in response.lower():
-                self.add_event(
-                    sender=self.name,
-                    tag=f"feedback_loop_{iterations}",
-                    content="Agent chose to proceed with similar questions"
-                )
-                # Handle the tool calls to add questions
-                await self.handle_tool_calls_async(response)
-                break
-            
-            try:
-                # Extract proposed questions from add_interview_question tool calls
-                proposed_questions = extract_tool_arguments(
-                    response, "add_interview_question", "question"
-                )
-            except Exception as e:
-                SessionLogger.log_to_file(
-                    "execution_log",
-                    f"[ERROR] Error extracting tool arguments: {e}"
-                    f"Set proposed questions to empty list"
-                )
-                proposed_questions = []
-            
-            if not proposed_questions:
-                if "recall" in response:
-                    # Handle recall response
-                    result = await self.handle_tool_calls_async(response)
-                    self.add_event(
-                        sender=self.name, 
-                        tag="recall_response", 
-                        content=result
-                    )
-                else:
-                    # No questions proposed and no recall needed
-                    # TODO
-                    self._claim_core_topic_completion()
-                    break
-            else:
-                # Search for similar questions
-                similar_questions: List[SimilarQuestionsGroup] = []
-                for question in proposed_questions:
-                    # Search in both question banks
-                    historical_results = \
-                        self.interview_session.historical_question_bank \
-                            .search_questions(query=question, k=3)
-                    proposed_results = \
-                        self.interview_session.proposed_question_bank \
-                            .search_questions(query=question, k=3)
-                    
-                    # Combine results and remove duplicates
-                    all_results: List[QuestionSearchResult] = []
-                    seen_questions = set()
-                    
-                    # Process all results and keep track of seen questions
-                    for result_list in [historical_results, proposed_results]:
-                        if result_list:
-                            for result in result_list:
-                                # Only add if we haven't seen before
-                                if result.content not in seen_questions:
-                                    all_results.append(result)
-                                    seen_questions.add(result.content)
-                    
-                    # Sort by similarity score (higher score = more similar)
-                    all_results.sort(key=lambda x: x.similarity_score, reverse=True)
-                    
-                    # Take top 3 unique results if available
-                    top_results = all_results[:3] if all_results else []
-                    
-                    if top_results:
-                        similar_questions.append(SimilarQuestionsGroup(
-                            proposed=question,
-                            similar=top_results
-                        ))
-                
-                if not similar_questions:
-                    # No similar questions found, proceed with adding
-                    await self.handle_tool_calls_async(response)
-                    break
-                else:
-                    # Save tool calls for next iteration
-                    previous_tool_call = extract_tool_calls_xml(response)
-            
-            iterations += 1
-
-        if iterations >= self._max_consideration_iterations:
-            self.add_event(
-                sender="system",
-                tag="error",
-                content=(
-                    f"Exceeded maximum number of consideration iterations "
-                    f"({self._max_consideration_iterations})"
-                )
-            )
 
     async def _write_memory_notes_and_question_bank(self) -> None:
         """Process the latest conversation and update both memory and question banks."""
@@ -531,48 +316,9 @@ class SessionScribe(BaseAgent, Participant):
         self.handle_tool_calls(response)
 
     def _get_formatted_prompt(self, prompt_type: str, **kwargs) -> str:
-        '''Gets the formatted prompt for the SessionScribe agent.'''
+        '''Gets the formatted prompt for the AgendaManager agent.'''
         prompt = get_prompt(prompt_type)
-        if prompt_type == "consider_and_propose_followups":
-            # Get all message events
-            events = self.get_event_stream_str(filter=[
-                {"tag": "notes_lock_message"},
-                {"sender": self.name, "tag": "recall_response"},
-                *[{"tag": f"consider_and_propose_followups_response_{i}"} \
-                   for i in range(self._max_consideration_iterations)]
-            ], as_list=True)
-
-            recent_events = events[-self._max_events_len:] if len(
-                events) > self._max_events_len else events
-
-            # Format warning if needed
-            similar_questions = kwargs.get('similar_questions', [])
-            previous_tool_call = kwargs.get('previous_tool_call')
-            warning = (
-                SIMILAR_QUESTIONS_WARNING.format(
-                    previous_tool_call=previous_tool_call,
-                    similar_questions= \
-                        format_similar_questions(similar_questions)
-                ) if similar_questions and previous_tool_call 
-                else ""
-            )
-
-            return format_prompt(prompt, {
-                "user_portrait": self.interview_session.session_agenda \
-                    .get_user_portrait_str(),
-                "event_stream": "\n".join(recent_events),
-                "questions_and_notes": (
-                    self.interview_session.session_agenda \
-                        .get_questions_and_notes_str()
-                ),
-                "similar_questions_warning": warning,
-                "warning_output_format": QUESTION_WARNING_OUTPUT_FORMAT \
-                                         if similar_questions else "",
-                "tool_descriptions": self.get_tools_description(
-                    selected_tools=["recall", "add_interview_question"]
-                )
-            })
-        elif prompt_type == "update_memory_and_session":
+        if prompt_type == "update_memory_and_session":
             events = self.get_event_stream_str(filter=[
                 {"tag": "memory_lock_message"},
             ], as_list=True)
@@ -684,29 +430,9 @@ class SessionScribe(BaseAgent, Participant):
                 "additional_context": kwargs.get("additional_context"),
                 "interview_description": self.interview_session.session_agenda.interview_description,
             })
-        elif prompt_type == "identify_emergent_insights":
-            events = self.get_event_stream_str(
-                filter=[{"tag": "agenda_lock_message"}], as_list=True)
-            current_qa = events[-2:] if len(events) >= 2 else []
-            previous_events = events[:-2] if len(events) >= 2 else events
-
-            if len(previous_events) > self._max_events_len:
-                previous_events = previous_events[-self._max_events_len:]
-
-            return format_prompt(prompt, {
-                "user_portrait": self.interview_session.session_agenda.user_portrait,
-                "interview_description": self.interview_session.session_agenda.interview_description,
-                "previous_events": "\n".join(previous_events),
-                "current_qa": "\n".join(current_qa),
-                "last_meeting_summary": self.interview_session.session_agenda.get_last_meeting_summary_str(),
-                "topics_list": self.interview_session.session_agenda.get_all_topics_and_subtopics(active_topics_only=True),
-                "tool_descriptions": self.get_tools_description(
-                    selected_tools=["identify_emergent_insights"]
-                )
-            })
 
     async def get_session_memories(self, clear_processed=False, wait_for_processing=True, include_processed=False) -> List[Memory]:
-        """Get memories added by session scribe during current session.
+        """Get memories added by agenda manager during current session.
         
         Args:
             clear_processed: 
@@ -775,15 +501,6 @@ class SessionScribe(BaseAgent, Participant):
         self._memory_id_map[temp_id] = real_id
         SessionLogger.log_to_file("execution_log",
                                   f"[MEMORY] Write a new memory with {real_id}")
-
-    def _get_real_memory_ids(self, temp_ids: List[str]) -> List[str]:
-        """Callback to get real memory IDs from temporary IDs"""
-        real_ids = [
-            self._memory_id_map[temp_id]
-            for temp_id in temp_ids
-            if temp_id in self._memory_id_map
-        ]
-        return real_ids
 
     async def _increment_pending_tasks(self):
         """Increment the pending tasks counter"""

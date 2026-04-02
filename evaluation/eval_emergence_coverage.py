@@ -29,7 +29,7 @@ TOKENIZER = None
 DEDUP_MODEL = None
 DEDUP_SIMILARITY_THRESHOLD = 0.8
 
-JUDGE_PROMPT = """You are a session scribe who assists an interviewer. You observe the dialogue between the interviewer and the candidate, and your role is to determine investigate each subtopic and its notes to determine whether the subtopic has achieved full coverage or not.
+JUDGE_PROMPT = """You are a agenda manager who assists an interviewer. You observe the dialogue between the interviewer and the candidate, and your role is to determine investigate each subtopic and its notes to determine whether the subtopic has achieved full coverage or not.
 
 Your objectives:
 1. Identify whether each subtopic should be evaluated using the STAR (Situation, Task, Action, Result) framework or a general descriptive evaluation.

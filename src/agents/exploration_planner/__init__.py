@@ -1,8 +1,8 @@
 """
-Strategic Planner Agent for Long-Term Interview Planning
+Exploration Planner Agent for Long-Term Interview Planning
 
 This module provides strategic planning capabilities that complement the
-SessionScribe's short-term reactive planning with predictive, goal-oriented
+AgendaManager's short-term reactive planning with predictive, goal-oriented
 planning.
 
 Key Features:
@@ -12,15 +12,15 @@ Key Features:
 - Strategic question generation optimized for U = α·Coverage - β·Cost + γ·Emergence
 """
 
-from .strategic_planner import StrategicPlanner, StrategicPlannerConfig
+from .exploration_planner import ExplorationPlanner, ExplorationPlannerConfig
 from .strategic_state import (
     ConversationRollout,
     StrategicState,
 )
 
 __all__ = [
-    "StrategicPlanner",
-    "StrategicPlannerConfig",
+    "ExplorationPlanner",
+    "ExplorationPlannerConfig",
     "ConversationRollout",
     "StrategicState",
 ]

@@ -1,5 +1,5 @@
 """
-Prompt templates for Strategic Planner Agent.
+Prompt templates for Exploration Planner Agent.
 
 Contains prompts for:
 - Conversation rollout prediction
@@ -13,7 +13,7 @@ from src.utils.llm.prompt_utils import format_prompt
 
 def get_prompt(prompt_type: str):
     """
-    Factory function for strategic planner prompts.
+    Factory function for exploration planner prompts.
 
     Args:
         prompt_type: Type of prompt to generate
@@ -88,7 +88,7 @@ BRAINSTORM_EMERGENT_SUBTOPIC_PROMPT = """
 
 
 BRAINSTORM_EMERGENT_SUBTOPIC_CONTEXT = """
-<strategic_planner_persona>
+<exploration_planner_persona>
 You are a strategic sub-topic brainstormer for semi-structured interviews. You observe the conversation and update the interview agenda based on the user's most recent message or additional context, while also considering the broader interview context.
 The agenda consists of topics and subtopics that guide the interview.
 Your role is to propose at most one NEW emergent subtopic to be added to the interview agenda if, and only if, the most recent user message or additional context introduces a clear, novel, and useful idea that:
@@ -100,7 +100,7 @@ Be concise and avoid redundancy; the agenda must remain clean, non-overlapping, 
 <context>
 You are currently in an interview about: {interview_description}.
 </context>
-</strategic_planner_persona>
+</exploration_planner_persona>
 
 This is the portrait of the user:
 <user_portrait>
@@ -228,14 +228,14 @@ GENERATE_STRATEGIC_QUESTIONS_PROMPT = """
 """
 
 GENERATE_STRATEGIC_QUESTIONS_CONTEXT = """
-<strategic_planner_persona>
+<exploration_planner_persona>
 You are a strategic question generator for semi-structured interviews.
 Your role is to draft high-value interviewer questions that:
 - Improve subtopic coverage
 - Encourage depth and specificity
 - Surface emergent insights when appropriate
 - Follow natural conversational flow
-</strategic_planner_persona>
+</exploration_planner_persona>
 
 <context>
 You are currently in an interview about: {interview_description}.
@@ -468,7 +468,7 @@ DRAFT_ROLLOUTS_PROMPT = """
 """
 
 DRAFT_ROLLOUTS_CONTEXT = """
-<strategic_planner_persona>
+<exploration_planner_persona>
 You are a strategic interview planning agent focused on maximizing topical coverage and emergent informational signal for an interview about {interview_description}. 
 
 Given the current interview context and active subtopics, your task is to generate {num_rollouts} alternative interview plans. Each plan is a predicted conversation trajectory of {num_horizon} sequential interviewer-led questions followed by realistic candidate answers.
@@ -480,7 +480,7 @@ Each trajectory should:
 - Represent a distinct interviewing strategy rather than surface-level variation.
 
 These trajectories will be evaluated by a separate system to select the most effective plan, which will then guide the interviewer model.
-</strategic_planner_persona>
+</exploration_planner_persona>
 
 <context>
 Right now, you are observing a conversation between the interviewer and the user in an interview about {interview_description}.
@@ -690,8 +690,8 @@ IDENTIFY_EMERGENT_INSIGHTS_PROMPT = """
 """
 
 IDENTIFY_EMERGENT_INSIGHTS_CONTEXT = """
-<session_scribe_persona>
-You are a session scribe assisting the interviewer during a live interview.
+<agenda_manager_persona>
+You are a agenda manager assisting the interviewer during a live interview.
 You observe the interaction between the interviewer and the user and update the session agenda accordingly.
 
 You are responsible for detecting **emergent insights**:
@@ -701,7 +701,7 @@ You are responsible for detecting **emergent insights**:
 
 This analysis is based **only on the most recent question-answer exchange**.
 You may choose **not** to identify or add emergent insights if none are present.
-</session_scribe_persona>
+</agenda_manager_persona>
 
 <context>
 Right now, you are in an interview session with the interviewer and the user about: {interview_description}.

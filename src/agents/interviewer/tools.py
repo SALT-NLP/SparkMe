@@ -71,33 +71,3 @@ class RespondToUser(BaseTool):
         self.on_turn_complete()
             
         return "Response sent to the user."
-
-class EndConversationInput(BaseModel):
-    goodbye: str = Field(description="The goodbye message to the user. Tell the user that you are looking forward to talking to them in the next session.")
-
-class EndConversation(BaseTool):
-    """Tool for ending the conversation."""
-    name: str = "end_conversation"
-    description: str = "A tool for ending the conversation."
-    args_schema: Type[BaseModel] = EndConversationInput
-    
-    on_goodbye: SkipValidation[Callable[[str], None]] = Field(
-        description="Callback function to be called with goodbye message"
-    )
-    on_end: SkipValidation[Callable[[], None]] = Field(
-        description="Callback function to be called when conversation ends"
-    )
-
-    def _run(
-        self,
-        goodbye: str,
-        run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> Any:
-        self.on_goodbye(goodbye)
-        
-        time.sleep(1)
-        
-        # Call the end callback if provided
-        self.on_end()
-            
-        return "Conversation ended successfully."

@@ -5,7 +5,7 @@ from langchain_core.tools import BaseTool, ToolException
 from pydantic import BaseModel, Field, field_validator
 
 from src.content.session_agenda.session_agenda import SessionAgenda
-from src.agents.strategic_planner.strategic_state import (
+from src.agents.exploration_planner.strategic_state import (
     StrategicState,
 )
 
@@ -58,14 +58,14 @@ class SuggestStrategicQuestions(BaseTool):
     - Filling coverage gaps
     - Exploring emergent insights
 
-    Questions are stored as suggestions for SessionScribe to consider,
+    Questions are stored as suggestions for AgendaManager to consider,
     not directly added to the question bank.
     """
     name: str = "suggest_strategic_questions"
     description: str = (
-        "Suggest strategic questions as guidance for SessionScribe. "
+        "Suggest strategic questions as guidance for AgendaManager. "
         "Questions are optimized for coverage, emergence, and utility. "
-        "SessionScribe will consider these suggestions but won't blindly use them if already covered."
+        "AgendaManager will consider these suggestions but won't blindly use them if already covered."
     )
     args_schema: Type[BaseModel] = SuggestStrategicQuestionsInput
     strategic_state: StrategicState = Field(...)
@@ -119,7 +119,7 @@ class SuggestStrategicQuestions(BaseTool):
             )
             if filtered_count > 0:
                 result_msg += f"Filtered out {filtered_count} suggestions for already-covered subtopics. "
-            result_msg += "These will be included in guidance for SessionScribe to consider."
+            result_msg += "These will be included in guidance for AgendaManager to consider."
 
             return result_msg
         except Exception as e:

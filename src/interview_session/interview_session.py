@@ -4,7 +4,6 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, TypedDict
 import signal
-import contextlib
 
 import time
 from tiktoken import get_encoding
@@ -12,8 +11,8 @@ from tiktoken import get_encoding
 from src.agents.base_agent import BaseAgent
 from src.interview_session.session_models import Message, MessageType, Participant
 from src.agents.interviewer.interviewer import Interviewer, InterviewerConfig, TTSConfig
-from src.agents.session_scribe.session_scribe import SessionScribe, SessionScribeConfig
-from src.agents.strategic_planner.strategic_planner import StrategicPlanner, StrategicPlannerConfig
+from src.agents.agenda_manager.agenda_manager import AgendaManager, AgendaManagerConfig
+from src.agents.exploration_planner.exploration_planner import ExplorationPlanner, ExplorationPlannerConfig
 from src.agents.user.user_agent import UserAgent
 from src.content.session_agenda.session_agenda import SessionAgenda
 from src.utils.data_process import save_feedback_to_csv
@@ -21,12 +20,9 @@ from src.utils.logger.session_logger import SessionLogger, setup_logger
 from src.utils.logger.evaluation_logger import EvaluationLogger
 from src.interview_session.user.user import User
 from src.interview_session.user.dummy_participant import UserDummyParticipant
-from src.agents.report_team.orchestrator import ReportOrchestrator
-from src.agents.report_team.base_report_agent import ReportConfig
 from src.content.memory_bank.memory_bank_vector_db import VectorMemoryBank
 from src.content.memory_bank.memory import Memory
 from src.content.question_bank.question_bank_vector_db import QuestionBankVectorDB
-from src.interview_session.prompts.conversation_summarize import summarize_conversation
 from src.utils.token_tracker import TokenUsageTracker
 
 
@@ -145,18 +141,8 @@ class InterviewSession:
         self._session_timeout = False
         self.max_turns = max_turns
 
-        # Report auto-update states
-        self.auto_report_update_in_progress = False
-        self.memory_threshold = int(
-            os.getenv("MEMORY_THRESHOLD_FOR_UPDATE", 10))
-        
-        # Conversation summary for auto-updates
-        self.conversation_summary = ""
-        
-        # Counter for user messages to trigger auto-updates check
+        # Counter for user messages
         self._user_message_count = 0
-        self._check_interval = max(1, self.memory_threshold // 5)
-        self._accumulated_auto_update_time = 0
 
         # Last message timestamp tracking for session timeout
         self._last_message_time = datetime.now()
@@ -187,64 +173,56 @@ class InterviewSession:
             ),
             interview_session=self
         )
-        # SessionScribe config with optional dedicated model
-        scribe_config = SessionScribeConfig(user_id=self.user_id)
+        # AgendaManager config with optional dedicated model
+        scribe_config = AgendaManagerConfig(user_id=self.user_id)
 
         # Use dedicated scribe model if configured
-        scribe_model = os.getenv("SESSION_SCRIBE_MODEL_NAME")
+        scribe_model = os.getenv("AGENDA_MANAGER_MODEL_NAME")
         if scribe_model:
             scribe_config["model_name"] = scribe_model
             # Pass base_url if configured (for vLLM)
-            scribe_base_url = os.getenv("SESSION_SCRIBE_VLLM_BASE_URL")
+            scribe_base_url = os.getenv("AGENDA_MANAGER_VLLM_BASE_URL")
             if scribe_base_url:
                 scribe_config["base_url"] = scribe_base_url
 
-        self.session_scribe = SessionScribe(
+        self.agenda_manager = AgendaManager(
             config=scribe_config,
             interview_session=self
         )
         
-        # StrategicPlanner config
-        # TODO: Tune strategic planner parameters
-        planner_config = StrategicPlannerConfig(
+        # ExplorationPlanner config
+        # TODO: Tune exploration planner parameters
+        planner_config = ExplorationPlannerConfig(
                 user_id=self.user_id,
-                turn_trigger=int(os.getenv("STRATEGIC_PLANNER_TURN_TRIGGER", "3")),
-                num_rollouts=int(os.getenv("STRATEGIC_PLANNER_NUM_ROLLOUTS", "3")),
-                rollout_horizon=int(os.getenv("STRATEGIC_PLANNER_ROLLOUT_HORIZON", "3")),
-                max_strategic_questions=int(os.getenv("STRATEGIC_PLANNER_MAX_QUESTIONS", "5")),
-                alpha=float(os.getenv("STRATEGIC_PLANNER_ALPHA", "0.5")),  # Coverage weight
-                beta=float(os.getenv("STRATEGIC_PLANNER_BETA", "0.3")),   # Cost penalty
-                gamma=float(os.getenv("STRATEGIC_PLANNER_GAMMA", "0.2"))   # Emergence reward
+                turn_trigger=int(os.getenv("EXPLORATION_PLANNER_TURN_TRIGGER", "3")),
+                num_rollouts=int(os.getenv("EXPLORATION_PLANNER_NUM_ROLLOUTS", "3")),
+                rollout_horizon=int(os.getenv("EXPLORATION_PLANNER_ROLLOUT_HORIZON", "3")),
+                max_strategic_questions=int(os.getenv("EXPLORATION_PLANNER_MAX_QUESTIONS", "5")),
+                alpha=float(os.getenv("EXPLORATION_PLANNER_ALPHA", "0.5")),  # Coverage weight
+                beta=float(os.getenv("EXPLORATION_PLANNER_BETA", "0.3")),   # Cost penalty
+                gamma=float(os.getenv("EXPLORATION_PLANNER_GAMMA", "0.2"))   # Emergence reward
         )
         
         # Use dedicated planner model if configured
-        planner_model = os.getenv("STRATEGIC_PLANNER_MODEL_NAME")
+        planner_model = os.getenv("EXPLORATION_PLANNER_MODEL_NAME")
         if planner_model:
             planner_config["model_name"] = planner_model
             # Pass base_url if configured (for vLLM)
-            planner_base_url = os.getenv("STRATEGIC_PLANNER_VLLM_BASE_URL")
+            planner_base_url = os.getenv("EXPLORATION_PLANNER_VLLM_BASE_URL")
             if planner_base_url:
                 planner_config["base_url"] = planner_base_url
         
-        self.strategic_planner: StrategicPlanner = StrategicPlanner(
+        self.exploration_planner: ExplorationPlanner = ExplorationPlanner(
             config=planner_config,
-            interview_session=self
-        )
-        self.report_orchestrator = ReportOrchestrator(
-            config=ReportConfig(
-                user_id=self.user_id,
-                report_style=user_config.get(
-                    "report_style", "chronological")
-            ),
             interview_session=self
         )
 
         # Subscriptions of participants to each other
         self._subscriptions: Dict[str, List[Participant]] = {
             # Subscribers of Interviewer: Note-taker and User (in following code)
-            "Interviewer": [self.session_scribe],
-            # Subscribers of User: Interviewer, SessionScribe, and StrategicPlanner
-            "User": [self._interviewer, self.session_scribe, self.strategic_planner]
+            "Interviewer": [self.agenda_manager],
+            # Subscribers of User: Interviewer, AgendaManager, and ExplorationPlanner
+            "User": [self._interviewer, self.agenda_manager, self.exploration_planner]
         }
 
         # User participant for terminal interaction
@@ -310,11 +288,6 @@ class InterviewSession:
                 f"[TOKEN_TRACKING] Saved token usage snapshot to {snapshot_path}",
                 log_level="info"
             )
-
-            # Check if we need to trigger a report update
-            if (self._user_message_count % self._check_interval == 0 and
-                not self.auto_report_update_in_progress):
-                asyncio.create_task(self._check_and_trigger_report_update())
 
             # Check if max turns reached
             if self.max_turns is not None and \
@@ -406,7 +379,7 @@ class InterviewSession:
     async def run(self):
         """Run the interview session"""
         # Augment session agenda with existing profile if applicable
-        await self.session_scribe.augment_session_agenda(additional_context_path=self._initial_additional_context_path)
+        await self.agenda_manager.augment_session_agenda(additional_context_path=self._initial_additional_context_path)
 
         SessionLogger.log_to_file(
             "execution_log", f"[RUN] Starting interview session")
@@ -420,7 +393,7 @@ class InterviewSession:
 
             # Monitor the session for completion and timeout
             while self.session_in_progress or \
-                self.session_scribe.processing_in_progress:
+                self.agenda_manager.processing_in_progress:
                 await asyncio.sleep(0.1)
 
                 # Check for timeout
@@ -444,54 +417,21 @@ class InterviewSession:
 
         # Post-interview Processing
         finally:
-            try:
-                self.session_in_progress = False
+            self.session_in_progress = False
 
-                # Update report (API mode handles this separately)
-                if self.interaction_mode != 'api' or self._session_timeout:
-                    with contextlib.suppress(KeyboardInterrupt):
-                        SessionLogger.log_to_file(
-                            "execution_log", 
-                            (
-                                f"[REPORT] Trigger final report update. "
-                                f"Waiting for session scribe to finish processing..."
-                            )
-                        )
-                        await self.final_update_report_and_agenda(
-                            selected_topics=[])
+            # Save memory bank
+            self.memory_bank.save_to_file(self.user_id)
+            SessionLogger.log_to_file(
+                "execution_log", f"[COMPLETED] Memory bank saved")
 
-                # Wait for report update to complete if it's in progress
-                start_time = time.time()
-                while (self.report_orchestrator.report_update_in_progress or 
-                       self.report_orchestrator.session_agenda_update_in_progress):
-                    await asyncio.sleep(0.1)
-                    if time.time() - start_time > 600:  # 10 minutes timeout
-                        SessionLogger.log_to_file(
-                            "execution_log", 
-                            (
-                                f"[REPORT] Timeout waiting for report update"
-                            )
-                        )
-                        break
+            # Save historical question bank
+            self.historical_question_bank.save_to_file(self.user_id)
+            SessionLogger.log_to_file(
+                "execution_log", f"[COMPLETED] Question bank saved")
 
-            except Exception as e:
-                SessionLogger.log_to_file(
-                    "execution_log", f"[RUN] Error during report update: \
-                          {str(e)}")
-            finally:
-                # Save memory bank
-                self.memory_bank.save_to_file(self.user_id)
-                SessionLogger.log_to_file(
-                    "execution_log", f"[COMPLETED] Memory bank saved")
-                
-                # Save historical question bank
-                self.historical_question_bank.save_to_file(self.user_id)
-                SessionLogger.log_to_file(
-                    "execution_log", f"[COMPLETED] Question bank saved")
-                       
-                self.session_completed = True
-                SessionLogger.log_to_file(
-                    "execution_log", f"[COMPLETED] Session completed")
+            self.session_completed = True
+            SessionLogger.log_to_file(
+                "execution_log", f"[COMPLETED] Session completed")
 
     async def get_session_memories(self, include_processed=True) -> List[Memory]:
         """Get memories added during this session
@@ -500,111 +440,11 @@ class InterviewSession:
             include_processed: If True, returns all memories from the session
                               If False, returns only the unprocessed memories
         """
-        return await self.session_scribe.get_session_memories(
+        return await self.agenda_manager.get_session_memories(
             clear_processed=False, 
             wait_for_processing=True,
             include_processed=include_processed
         )
-
-    async def _check_and_trigger_report_update(self):
-        """Check if we have enough memories to trigger a report update"""
-        # Skip if report update already in progress or session not in progress
-        if self.auto_report_update_in_progress or \
-           not self.session_in_progress or \
-           self.report_orchestrator.report_update_in_progress:
-            return
-            
-        # Get current memory count without clearing or waiting
-        memories = await self.session_scribe \
-            .get_session_memories(clear_processed=False,
-                                   wait_for_processing=False)
-        
-        # Check if we've reached the threshold
-        if len(memories) >= self.memory_threshold:
-            SessionLogger.log_to_file(
-                "execution_log",
-                f"[AUTO-UPDATE] Triggering report update "
-                f"with {len(memories)} memories"
-            )
-            
-            try:
-                self.auto_report_update_in_progress = True
-                
-                # Generate a summary of recent conversation
-                await self._update_conversation_summary()
-                
-                # Get memories and clear them from the session scribe
-                memories_to_process = \
-                    await self.session_scribe.get_session_memories(
-                        clear_processed=True, wait_for_processing=False)
-                
-                # Measure the time auto-update would take
-                start_time = time.time()
-                
-                # Update report with these memories and the conversation summary
-                # await self.report_orchestrator.update_report_with_memories(
-                #     memories_to_process,
-                #     is_auto_update=True
-                # )
-                
-                # Record the time it took
-                update_time = time.time() - start_time
-                self._accumulated_auto_update_time += update_time
-                
-                SessionLogger.log_to_file(
-                    "execution_log",
-                    f"[AUTO-UPDATE] Report update completed "
-                    f"for {len(memories_to_process)} memories"
-                )
-                
-            except Exception as e:
-                SessionLogger.log_to_file(
-                    "execution_log", 
-                    f"[AUTO-UPDATE] Error during report update: {str(e)}"
-                )
-            finally:
-                self.auto_report_update_in_progress = False
-    
-    async def _update_conversation_summary(self):
-        """Generate a summary of recent conversation messages"""
-        
-        # Extract recent messages from chat history
-        recent_messages: List[Message] = []
-        for msg in self.chat_history[-self.session_scribe._max_events_len:]:
-            if msg.type == MessageType.CONVERSATION:
-                recent_messages.append(msg)
-        
-        # Generate summary if we have messages
-        if recent_messages:
-            self.conversation_summary = \
-                summarize_conversation(recent_messages)
-    
-    async def final_update_report_and_agenda(self, selected_topics: Optional[List[str]] = None):
-        """Trigger final report update"""
-        # Record start time
-        start_time = time.time()
-        
-        try:
-            # Proceed with the final update
-            await self.report_orchestrator.final_update_report_and_agenda(
-                selected_topics=selected_topics,
-                wait_time=self._accumulated_auto_update_time if \
-                    (BaseAgent.use_baseline and 
-                    self.interaction_mode == "api") else None
-                # Simulate baseline mode without auto-updates for web user testing
-            )
-        finally:
-            # Calculate and log duration
-            duration = time.time() - start_time
-            eval_logger = EvaluationLogger.setup_logger(
-                self.user_id, self.session_id)
-            eval_logger.log_report_update_time(
-                update_type="final",
-                duration=duration if not BaseAgent.use_baseline \
-                    else (duration + self._accumulated_auto_update_time),
-                accumulated_auto_time=self._accumulated_auto_update_time
-                # Simulate baseline mode without auto-updates
-            )
 
     def end_session(self):
         """End the session without triggering report update"""

@@ -64,7 +64,7 @@ class StrategicState(BaseModel):
 
     strategic_question_suggestions: List[Dict[str, Any]] = Field(default_factory=list)
     """
-    Suggested strategic questions for SessionScribe to consider.
+    Suggested strategic questions for AgendaManager to consider.
     Each suggestion contains:
     - content: Question text
     - subtopic_id: Target subtopic

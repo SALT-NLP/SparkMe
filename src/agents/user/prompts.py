@@ -10,14 +10,6 @@ def get_prompt(prompt_type: str):
             "INSTRUCTIONS": RESPOND_INSTRUCTIONS_PROMPT,
             "OUTPUT_FORMAT": RESPONSE_OUTPUT_FORMAT_PROMPT
         })
-    elif prompt_type == "score_question":
-        return format_prompt(SCORE_QUESTION_PROMPT, {
-            "CONTEXT": SCORE_QUESTION_CONTEXT,
-            "PROFILE_BACKGROUND": PROFILE_BACKGROUND_PROMPT,
-            "CHAT_HISTORY": CHAT_HISTORY,
-            "INSTRUCTIONS": SCORE_QUESTION_INSTRUCTIONS_PROMPT,
-            "OUTPUT_FORMAT": SCORE_QUESTION_OUTPUT_FORMAT_PROMPT
-        })
     elif prompt_type == "introduction":
       return format_prompt(INTRODUCTION_PROMPT, {
             "CONTEXT": INTRODUCTION_CONTEXT,
@@ -179,93 +171,3 @@ Respond directly as the user without tags, reasoning, or preamble.
 Begin your response now:
 """
 
-SCORE_QUESTION_PROMPT = """
-{CONTEXT}
-
-{PROFILE_BACKGROUND}
-
-{CHAT_HISTORY}
-
-{INSTRUCTIONS}
-
-{OUTPUT_FORMAT}
-"""
-
-SCORE_QUESTION_CONTEXT = """
-<context>
-You are playing the role of a real person being interviewed, evaluating the quality and appropriateness of the interviewer's questions. You should assess whether the questions align with your background, interests, and the natural flow of conversation.
-</context>
-"""
-
-SCORE_QUESTION_INSTRUCTIONS_PROMPT = """
-<instructions>
-- Rate the interviewer's last question on a 1-5 scale based on your personal perspective:
-  1: Strongly dislike - Question feels inappropriate or misaligned
-    * Focuses too much on future plans rather than life experiences
-    * Shows no connection to your biographical narrative
-    * Makes you feel pressured or uncomfortable
-    * Completely mismatches your conversational style
-    * Ignores the natural progression of your life story
-
-  2: Dislike - Question feels poorly timed or awkward
-    * Jumps ahead without proper context from your past
-    * Only weakly connects to your shared experiences
-    * Emphasizes planning over reflection
-    * Poorly aligns with how you naturally communicate
-    * Disrupts the biographical narrative flow
-
-  3: Neutral - Question is acceptably biographical
-    * Balances past experiences with gentle forward context
-    * Has some connection to your life story
-    * Maintains focus on understanding your journey
-    * Somewhat matches your communication preferences
-    * Keeps the biographical narrative moving
-
-  4: Like - Question enriches your life story naturally
-    * Explores meaningful aspects of your experiences
-    * Follows logically from your previous revelations
-    * Prompts authentic self-reflection
-    * Aligns well with your conversational style
-    * Creates engaging biographical progression
-
-  5: Strongly like - Question perfectly captures your story
-    * Draws out rich details about your life experiences
-    * Builds masterfully on your shared history
-    * Prompts genuine autobiographical insights
-    * Perfectly matches your way of communicating
-    * Creates ideal narrative momentum
-
-- Consider these key factors from your perspective:
-  * Your established communication preferences
-  * Your comfort with different conversation depths
-  * Your previously shared information
-  * Your personality traits and tendencies
-  * Your typical response patterns
-  * The natural flow of conversation for you
-
-- Provide specific reasoning for your score based on your character's unique perspective
-</instructions>
-"""
-
-SCORE_QUESTION_OUTPUT_FORMAT_PROMPT = """
-<output_format>
-Your evaluation must contain both a <thinking> tag and a <response_content> tag:
-
-<thinking>
-Reasoning: [3-4 sentences explaining the score from your character's perspective, highlighting specific aspects that resonated or felt misaligned, and how this impacts the overall conversation dynamic]. Consider the following:
-- Analyze how the question relates to your established background and interests
-- Evaluate if it aligns with your typical communication preferences and style
-- Consider how it builds on or contradicts previously shared information
-- Assess if the depth matches your comfort level for personal discussions
-- Examine if it respects your personality traits and behavioral tendencies
-- Analyze how naturally it fits into the current conversation flow
-- Identify specific elements that you connect with or find off-putting
-- Consider if the timing and context feel appropriate for your character
-- Determine if it creates the kind of conversational momentum you prefer
-- Evaluate if the question's assumptions about you feel accurate
-</thinking>
-<response_content>
-The numerical score [1-5] that you give to the interviewer's last question. Nothing else.
-</response_content>
-</output_format>
-"""
