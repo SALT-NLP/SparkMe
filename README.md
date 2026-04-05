@@ -201,6 +201,8 @@ python main.py --user_id <id> --max_turns 80
 
 You can generate the user agent personas through `dataset_gen/generate_persona_facts.py` to generate initial persona facts for each subtopic based on the WorkBank worker seed, followed by `dataset_gen/generate_bio_notes.py` to generate the profile to be fed to the user agent.
 
+The 200 synthetic user profiles used in our evaluation are available on HuggingFace at [SALT-NLP/SparkMe-SyntheticUsers](https://huggingface.co/datasets/SALT-NLP/SparkMe-SyntheticUsers). You can also access them in our repository in `data/` folder.
+
 ## Evaluation
 
 Evaluation scripts are in `evaluation/`. They assess interview quality from different angles. All support `--mode` to specify which system's logs to evaluate (`sparkme`, `storysage`, `llmroleplay`, or `freeform`). Here `freeform` corresponds to either `MimiTalk` or `InterviewGPT`
