@@ -8,7 +8,7 @@ Subtopic represents the sub-topic occuring within core topic that needs to be co
 
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
-from src.content.question_bank.question import InterviewQuestion, Rubric
+from src.content.question_bank.question import InterviewQuestion
 
 
 class EmergentInsight(BaseModel):

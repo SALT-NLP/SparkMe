@@ -99,34 +99,6 @@ def parse_tool_calls(xml_string: str) -> Dict[str, Any]:
     
     return result
 
-def parse_rubric_call(xml_string: str):
-    """Parse XML tool calls while preserving <thinking> content and parsing rubric JSON"""
-    root = ET.fromstring(xml_string)
-    result = []
-
-    def parse_value(text: str):
-        if not text:
-            return ""
-        text = text.strip()
-        # Try JSON
-        try:
-            return json.loads(text)
-        except Exception:
-            return text
-
-    for tool_element in root:
-        tool_name = tool_element.tag
-        if tool_name == "tool_calls":
-            # For nested tags like <tool_calls><enrich_question>...</enrich_question>
-            for child in tool_element:
-                child_name = child.tag
-                if child_name  == 'enrich_question':
-                    child_args = {}
-                    for arg in child:
-                        child_args[arg.tag] = parse_value(arg.text)
-                    result.append(child_args)
-
-    return result
 
 def call_tool_from_xml(tool_calls_xml_string: str, available_tools: Dict[str, BaseTool]) -> str:
     parsed_calls = parse_tool_calls(tool_calls_xml_string)

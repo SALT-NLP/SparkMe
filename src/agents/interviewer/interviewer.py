@@ -69,18 +69,15 @@ class Interviewer(BaseAgent, Participant):
             topic_id: The topic ID of the response
             subtopic_id: The subtopic ID of the response
         """
-        quantified_question = response
-        rubric = None
-        
         self.interview_session.add_message_to_chat_history(
             role=self.title,
-            content=quantified_question,
-            metadata={'subtopic_id': str(subtopic_id), "rubric": rubric},
+            content=response,
+            metadata={'subtopic_id': str(subtopic_id)},
         )
         self.add_event(sender=self.name, tag="message",
-                       content=quantified_question)
-        
-        return quantified_question
+                       content=response)
+
+        return response
 
     async def on_message(self, message: Message):
 

@@ -393,7 +393,8 @@ class InterviewSession:
 
             # Monitor the session for completion and timeout
             while self.session_in_progress or \
-                self.agenda_manager.processing_in_progress:
+                self.agenda_manager.processing_in_progress or \
+                self.exploration_planner.processing_in_progress:
                 await asyncio.sleep(0.1)
 
                 # Check for timeout

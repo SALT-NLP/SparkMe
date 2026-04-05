@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 import json
 
-from src.content.question_bank.question import Question, InterviewQuestion, Rubric
+from src.content.question_bank.question import Question, InterviewQuestion
 from src.content.session_agenda.interview_topic_manager import InterviewTopicManager
 from src.utils.logger.session_logger import SessionLogger
 from src.utils.data_process import safe_parse_json
@@ -116,26 +116,19 @@ class SessionAgenda:
                                              interview_description=interview_description,
                                              interview_evaluation=interview_evaluation)
 
-    def add_interview_question_raw(self, subtopic_id: str, question: str,
-                                   rubric: Optional[str] = None) -> bool:
+    def add_interview_question_raw(self, subtopic_id: str, question: str) -> bool:
         """Adds a new interview question to the session agenda.
-        
+
         Args:
             subtopic_id: The subtopic identifier
             question: The actual question text
-            rubric: Optional rubric for the question
         """
         question_id = Question.generate_question_id()
-        
-        final_rubric = rubric
-        if rubric is not None and rubric != "":
-            final_rubric = Rubric(**json.loads(rubric))
         new_question = InterviewQuestion(subtopic_id=subtopic_id,
-                                        question_id=question_id, question=question,
-                                        rubric=final_rubric)
+                                        question_id=question_id, question=question)
         status = self.interview_topic_manager.add_question(subtopic_id=subtopic_id,
                                                            new_question=new_question)
-        
+
         return status
         
     def add_interview_question(self, question: Question) -> bool:
@@ -145,8 +138,7 @@ class SessionAgenda:
             question: a Question object
         """
         new_question = InterviewQuestion(subtopic_id=question.subtopic_id,
-                                        question_id=question.id, question=question.content,
-                                        rubric=question.rubric)
+                                        question_id=question.id, question=question.content)
         status = self.interview_topic_manager.add_question(subtopic_id=question.subtopic_id,
                                                             new_question=new_question)
         
@@ -330,9 +322,6 @@ class SessionAgenda:
             else:
                 lines.append(f"{prefix}* Question ID: {qa.question_id}")
                 lines.append(f"{prefix}  Question: {qa.question}")
-                if qa.rubric and qa.rubric.labels:
-                    for label, desc in zip(qa.rubric.labels, qa.rubric.descriptions):
-                        lines.append(f"{prefix}  {label}: {desc}")
                 if hide_answered != "a":
                     for note in qa.notes:
                         lines.append(f"{prefix}  [NOTE] {note}")
@@ -340,9 +329,6 @@ class SessionAgenda:
             # unanswered questions
             lines.append(f"{prefix}* Question ID: {qa.question_id}")
             lines.append(f"{prefix}  Question: {qa.question}")
-            if qa.rubric and qa.rubric.labels:
-                for label, desc in zip(qa.rubric.labels, qa.rubric.descriptions):
-                    lines.append(f"{prefix}  {label}: {desc}")
 
         # recurse into sub-questions (deeper indent)
         if qa.sub_questions:

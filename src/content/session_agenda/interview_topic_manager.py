@@ -10,7 +10,7 @@ import faiss
 import numpy as np
 from pydantic import BaseModel, Field
 from src.content.embeddings.embedding_service import EmbeddingService
-from src.content.question_bank.question import InterviewQuestion, Rubric
+from src.content.question_bank.question import InterviewQuestion
 from src.content.session_agenda.core_topic import CoreTopic, SubTopic, EmergentInsight
 from src.content.session_agenda.topic_evaluator import TopicEvaluator, MinimumThresholdSubtopicsEvaluator, get_registry
 

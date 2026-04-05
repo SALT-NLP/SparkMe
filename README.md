@@ -1,7 +1,7 @@
 # SparkMe
 
 <p align="center">
-  <img src="./assets/main-diagram.png" alt="SparkMe Diagram" width="80%"/>
+  <img src="./assets/main-diagram.png" alt="SparkMe Diagram" width="90%"/>
 </p>
 
 An multi-agent semi-structured interview system that conducts multi-turn interviews with strategic question planning, real-time note-taking, and emergent subtopic discovery. Supports both terminal and web interfaces.
@@ -240,13 +240,13 @@ Computes cumulative coverage metrics from evaluation results.
 
 ## Citation
 
-If you found our work helpful, please cite our work using the following citation (will be updated soon)!
+If you found our work helpful, please cite our work using the following citation!
 
 ```bibtex
 @article{anugraha2026sparkme,
   title={SparkMe: Adaptive Semi-Structured Interviewing for Qualitative Insight Discovery},
   author={Anugraha, David and Padmakumar, Vishakh and Yang, Diyi},
-  journal={arXiv preprint arXiv:XXXX.XXXXX},
+  journal={arXiv preprint arXiv:2602.21136},
   year={2026}
 }
 ```

@@ -211,12 +211,12 @@ class BaseAgent:
                                 "should use handle_tool_calls_async"
                             )
                     except Exception as e:
-                        error_msg = f"Error calling tool {tool_name}: {e}"
+                        error_msg = f"Error calling tool {tool_name}: {e}. Raw response (first 500 chars): {response[:500]}"
                         self.add_event(sender="system", tag="error",
                                        content=error_msg)
                         SessionLogger.log_to_file(
-                            "execution_log", 
-                            f"({self.name}) {error_msg}", 
+                            "execution_log",
+                            f"({self.name}) {error_msg}",
                             log_level="error"
                         )
                         if raise_error:
@@ -249,12 +249,12 @@ class BaseAgent:
                         self.add_event(sender="system", 
                                        tag=tool_name, content=result)
                     except Exception as e:
-                        error_msg = f"Error calling tool {tool_name}: {e}"
+                        error_msg = f"Error calling tool {tool_name}: {e}. Raw response (first 500 chars): {response[:500]}"
                         self.add_event(sender="system", tag="error",
                                        content=error_msg)
                         SessionLogger.log_to_file(
-                            "execution_log", 
-                            f"({self.name}) {error_msg}", 
+                            "execution_log",
+                            f"({self.name}) {error_msg}",
                             log_level="error"
                         )
                         if raise_error:

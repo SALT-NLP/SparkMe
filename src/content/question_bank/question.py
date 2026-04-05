@@ -2,19 +2,7 @@ from datetime import datetime
 import string
 import random
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, model_validator
-
-class Rubric(BaseModel):
-    """Represents a rubric for quantifiable information."""
-    labels: List[str] = Field(description="Labels for each scale point")
-    descriptions: List[str] = Field(description="Descriptions for each scale point")
-
-    @model_validator(mode='after')
-    def check_lengths_match(self) -> 'Rubric':
-        """Ensure labels and descriptions have the same length."""
-        if self.labels and self.descriptions and len(self.labels) != len(self.descriptions):
-            raise ValueError('The number of labels must match the number of descriptions.')
-        return self
+from pydantic import BaseModel, Field
 
 class Question(BaseModel):
     """Model for storing interview questions with their associated memories."""
@@ -23,9 +11,7 @@ class Question(BaseModel):
     memory_ids: list[str]  # IDs of memories related to this question
     timestamp: datetime
     
-    # New fields for workforce interview support
     subtopic_id: Optional[str] = Field(default=None, description="Link to a subtopic if this question captures information about the subtopic")
-    rubric: Optional[Rubric] = Field(default=None, description="Rubric if this question uses a rubric")
 
     def to_dict(self) -> dict:
         """Convert Question object to dictionary."""
@@ -35,20 +21,17 @@ class Question(BaseModel):
             'memory_ids': self.memory_ids,
             'timestamp': self.timestamp.isoformat(),
             'subtopic_id': self.subtopic_id,
-            'rubric': self.rubric.model_dump() if self.rubric else None,
         }
 
     @classmethod
     def from_dict(cls, question_dict: dict) -> 'Question':
         """Create Question object from dictionary."""
-        rubric_data = question_dict.get('rubric')
         return cls(
             id=question_dict['id'],
             content=question_dict['content'],
             memory_ids=question_dict['memory_ids'],
             timestamp=datetime.fromisoformat(question_dict['timestamp']),
             subtopic_id=question_dict.get('subtopic_id'),
-            rubric=Rubric(**rubric_data) if rubric_data else None,
         )
         
     @classmethod
@@ -75,7 +58,6 @@ class QuestionSearchResult(Question):
             memory_ids=question.memory_ids,
             timestamp=question.timestamp,
             subtopic_id=question.subtopic_id,
-            rubric=question.rubric,
             similarity_score=similarity_score
         )
 
@@ -89,7 +71,6 @@ class InterviewQuestion(BaseModel):
     subtopic_id: str
     question_id: str
     question: str
-    rubric: Optional[Rubric] = Field(default=None, description="Rubric if this question uses a rubric")
     notes: List[str] = Field(default_factory=list)
     sub_questions: List['InterviewQuestion'] = Field(default_factory=list)
     
@@ -118,7 +99,6 @@ class InterviewQuestion(BaseModel):
             'subtopic_id': self.subtopic_id,
             'question_id': self.question_id,
             'question': self.question,
-            'rubric': self.rubric.model_dump() if self.rubric else None,
             'notes': self.notes,
             'sub_questions': [sub_q.to_dict() for sub_q in self.sub_questions],
         }
@@ -127,12 +107,10 @@ class InterviewQuestion(BaseModel):
     def from_dict(cls, question_dict: dict) -> 'InterviewQuestion':
         """Create InterviewQuestion object from dictionary."""
         sub_questions_data = question_dict.get('sub_questions', [])
-        rubric_data = question_dict.get('rubric')
         return cls(
             subtopic_id=question_dict['subtopic_id'],
             question_id=question_dict['question_id'],
             question=question_dict['question'],
-            rubric=Rubric(**rubric_data) if rubric_data else None,
             notes=question_dict.get('notes', []),
             sub_questions=[cls.from_dict(sub_q) for sub_q in sub_questions_data],
         )

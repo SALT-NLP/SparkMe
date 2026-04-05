@@ -6,7 +6,7 @@ import numpy as np
 import faiss
 
 from src.content.question_bank.question_bank_base import QuestionBankBase
-from src.content.question_bank.question import Rubric, Question, QuestionSearchResult
+from src.content.question_bank.question import Question, QuestionSearchResult
 from src.content.embeddings.embedding_service import EmbeddingService
 
 # Load environment variables
@@ -36,22 +36,20 @@ class QuestionBankVectorDB(QuestionBankBase):
         content: str,
         memory_ids: Optional[List[str]] = None,
         subtopic_id: Optional[str] = None,
-        rubric: Optional[Rubric] = None,
     ) -> Question:
         """Add a new question to the vector database."""
         if memory_ids is None:
             memory_ids = []
-            
+
         question_id = Question.generate_question_id()
         embedding = self._get_embedding(content)
-        
+
         question = Question(
             id=question_id,
             content=content,
             memory_ids=memory_ids,
             timestamp=datetime.now(),
             subtopic_id=subtopic_id,
-            rubric=rubric
         )
         
         self.questions.append(question)

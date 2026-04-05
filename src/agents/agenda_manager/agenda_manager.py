@@ -137,15 +137,13 @@ class AgendaManager(BaseAgent, Participant):
         if self._last_interviewer_message:
             subtopic_id = str(self._last_interviewer_message.metadata.get('subtopic_id', ""))
             question_text = self._last_interviewer_message.content.strip()
-            rubric = self._last_interviewer_message.metadata.get('rubric', None)
-            
+
             # Add question to QuestionBank if exists
             adding_status = False
             if self.interview_session.proposed_question_bank:
-                question = self.interview_session.proposed_question_bank.add_question(content=question_text, 
-                                                         subtopic_id=subtopic_id,
-                                                         rubric=rubric)
-                
+                question = self.interview_session.proposed_question_bank.add_question(content=question_text,
+                                                         subtopic_id=subtopic_id)
+
                 # Add question to SessionAgenda
                 adding_status = self.interview_session.session_agenda.add_interview_question(question=question)
             else:
@@ -153,7 +151,6 @@ class AgendaManager(BaseAgent, Participant):
                 adding_status = self.interview_session.session_agenda.add_interview_question_raw(
                     subtopic_id=subtopic_id,
                     question=question_text,
-                    rubric=rubric  # Pass the generated rubric
                 )
                 
             if not adding_status:

@@ -124,6 +124,10 @@ class ExplorationPlanner(BaseAgent, Participant):
             ),
         }
 
+    @property
+    def processing_in_progress(self) -> bool:
+        return self._planning_in_progress
+
     async def on_message(self, message: Message):
         """
         Handle incoming messages and trigger strategic planning when appropriate.
@@ -298,7 +302,7 @@ class ExplorationPlanner(BaseAgent, Participant):
         except (json.JSONDecodeError, ValueError) as e:
             SessionLogger.log_to_file(
                 "execution_log",
-                f"({self.name}) Error parsing rollout JSON: {e}",
+                f"({self.name}) Error parsing rollout JSON: {e}. Raw response (first 500 chars): {response[:500]}",
                 log_level="error"
             )
             return []
@@ -359,7 +363,7 @@ class ExplorationPlanner(BaseAgent, Participant):
         except (json.JSONDecodeError, ValueError, KeyError) as e:
             SessionLogger.log_to_file(
                 "execution_log",
-                f"({self.name}) Error parsing coverage judgment JSON: {e}",
+                f"({self.name}) Error parsing coverage judgment JSON: {e}. Raw response (first 500 chars): {response[:500]}",
                 log_level="error"
             )
             return []

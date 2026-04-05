@@ -7,7 +7,7 @@ import string
 from datetime import datetime
 import xml.etree.ElementTree as ET
 
-from src.content.question_bank.question import Rubric, Question, QuestionSearchResult
+from src.content.question_bank.question import Question, QuestionSearchResult
 from src.utils.llm.engines import get_engine, invoke_engine
 from src.utils.logger.evaluation_logger import EvaluationLogger
 
@@ -53,16 +53,14 @@ class QuestionBankBase(ABC):
         content: str,
         memory_ids: Optional[List[str]] = None,
         subtopic_id: Optional[str] = None,
-        rubric: Optional[Rubric] = None,
     ) -> Question:
         """Add a new question to the database.
-        
+
         Args:
             content: The question text
             memory_ids: List of related memory IDs
             subtopic_id: Optional ID of the subtopic this question belongs to
-            rubric: Optional Rubric object for this question
-            
+
         Returns:
             Question: The created question object
         """
