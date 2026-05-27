@@ -186,11 +186,24 @@ class Interviewer(BaseAgent, Participant):
         else:
             main_prompt = get_prompt("normal")
 
-            # Remove STRATEGIC_QUESTIONS section from template if stale
+            # Remove the strategic_questions block when EP suggestions are not yet
+            # available or have become stale.
+            #
+            # NOTE: get_prompt("normal") performs a first-stage format_prompt that
+            # expands the uppercase {STRATEGIC_QUESTIONS} token into the full
+            # <strategic_questions>…{strategic_questions}…</strategic_questions>
+            # block.  By the time we reach this branch the uppercase token is gone,
+            # so the previous string-replace on "\n{STRATEGIC_QUESTIONS}\n" was a
+            # no-op, leaving the raw "{strategic_questions}" placeholder in the
+            # prompt.  We now strip the already-expanded block with regex instead.
             if not self.use_baseline and not self._should_include_strategic_questions():
-                # Remove the {STRATEGIC_QUESTIONS} line to exclude the section entirely
-                main_prompt = main_prompt.replace("\n{STRATEGIC_QUESTIONS}\n", "\n")
-                # Don't provide strategic_questions key in format_params (already omitted above)
+                main_prompt = re.sub(
+                    r"\n<strategic_questions>.*?</strategic_questions>",
+                    "",
+                    main_prompt,
+                    flags=re.DOTALL,
+                )
+                # strategic_questions is intentionally absent from format_params
 
         return format_prompt(main_prompt, format_params)
 
