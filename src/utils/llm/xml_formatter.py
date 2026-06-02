@@ -38,28 +38,59 @@ def format_tool_as_xml_v2(tool: Type[BaseTool]) -> str:
     return "\n".join(lines)
 
 def parse_tool_calls(xml_string: str) -> Dict[str, Any]:
+    """Parse XML tool calls with proper XML entity handling.
+
+    If the LLM returns structurally malformed XML (mismatched tags, stray
+    angle brackets inside field values, etc.) ``ET.fromstring`` raises
+    ``ET.ParseError``.  We attempt one recovery pass using
+    ``clean_malformed_xml`` before giving up.  This prevents the background
+    ``AgendaManager._process_qa_pair`` tasks from dying silently and leaving
+    memory / subtopic-coverage state partially un-updated.
+
+    Returns an empty list rather than raising when both parse attempts fail,
+    so the calling interview can continue unimpeded.
     """
-    Parse XML tool calls with proper XML entity handling
-    """
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+
     # First, identify and escape any < or > within response tags
     xml_string = xml_string.replace('&', '&amp;')
     # xml_string = xml_string.replace('<', '&lt;')
     # xml_string = xml_string.replace('>', '&gt;')
     xml_string = xml_string.replace('"', '&quot;')
     xml_string = xml_string.replace("'", '&apos;')
-    
+
     # Find content between <response> tags and escape < and > within it
     def escape_response_content(match):
         content = match.group(1)
         escaped_content = content.replace('<', '&lt;').replace('>', '&gt;')
         return f"<response>{escaped_content}</response>"
-    
-    xml_string = re.sub(r'<response>(.*?)</response>', 
-                        escape_response_content, 
-                        xml_string, 
+
+    xml_string = re.sub(r'<response>(.*?)</response>',
+                        escape_response_content,
+                        xml_string,
                         flags=re.DOTALL)
-    
-    root = ET.fromstring(xml_string)
+
+    # Attempt 1: parse as-is.
+    try:
+        root = ET.fromstring(xml_string)
+    except ET.ParseError as first_err:
+        # Attempt 2: clean mismatched tags then retry.
+        _log.warning(
+            "parse_tool_calls: malformed XML (%s); attempting clean_malformed_xml recovery",
+            first_err,
+        )
+        try:
+            cleaned = clean_malformed_xml(xml_string)
+            root = ET.fromstring(cleaned)
+            _log.info("parse_tool_calls: recovery succeeded after clean_malformed_xml")
+        except ET.ParseError as second_err:
+            _log.error(
+                "parse_tool_calls: XML unrecoverable after clean attempt (%s); "
+                "returning empty tool-call list.  Raw (first 300): %.300s",
+                second_err, xml_string,
+            )
+            return []
     result = []
     
     def parse_value(text: str) -> Any:
